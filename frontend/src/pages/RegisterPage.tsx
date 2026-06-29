@@ -9,13 +9,21 @@ import { useAuthStore } from '../store/auth';
  * 它使用 auth.ts 的 register API、React Router 导航和 auth store，在本项目中完成新用户创建并自动进入登录态。
  */
 export function RegisterPage() {
+  // navigate 来自 React Router，用于注册成功后跳转到知识库入口页。
   const navigate = useNavigate();
+  // setAuth 来自 auth.ts 的 Zustand store，用于保存注册成功后返回的登录态。
   const setAuth = useAuthStore((state) => state.setAuth);
+  // username 使用 React 自带 useState 保存注册表单中的用户名。
   const [username, setUsername] = useState('');
+  // nickname 使用 React 自带 useState 保存注册表单中的昵称。
   const [nickname, setNickname] = useState('');
+  // email 使用 React 自带 useState 保存注册表单中的邮箱，可为空。
   const [email, setEmail] = useState('');
+  // password 使用 React 自带 useState 保存注册表单中的密码。
   const [password, setPassword] = useState('');
+  // error 使用 React 自带 useState 保存注册失败消息，并展示在表单中。
   const [error, setError] = useState('');
+  // submitting 使用 React 自带 useState 标记注册请求是否正在提交，用于禁用按钮和显示 loading 文案。
   const [submitting, setSubmitting] = useState(false);
 
   /**
@@ -29,6 +37,7 @@ export function RegisterPage() {
     setError('');
     setSubmitting(true);
     try {
+      // response 来自 auth.ts 的 register API，包含后端 AuthResponse.java 返回的 Token 和用户资料。
       const response = await register({ username, nickname, email: email || undefined, password });
       setAuth(response);
       navigate('/knowledge-bases', { replace: true });

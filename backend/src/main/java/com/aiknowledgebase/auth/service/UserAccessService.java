@@ -4,30 +4,33 @@ import com.aiknowledgebase.auth.entity.User;
 import com.aiknowledgebase.auth.mapper.UserMapper;
 import com.aiknowledgebase.common.BusinessException;
 import com.aiknowledgebase.common.ErrorCode;
+import com.aiknowledgebase.rbac.service.RbacService;
 import com.aiknowledgebase.security.CurrentUser;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 /**
  * UserAccessService 负责把 JWT 中的用户 ID 转换为当前请求用户。
- * 它通过 UserMapper 查询 users 表并组装 CurrentUser，在本项目中为 Spring Security 过滤器提供登录态和权限上下文。
+ * 它通过 UserMapper 查询用户状态并通过 RbacService 加载角色权限，在本项目中为 Spring Security 过滤器提供登录态和权限上下文。
  */
 @Service
 public class UserAccessService {
 
+    // ENABLED 是 users.status 的启用状态值，用于 JWT 请求加载当前用户时校验账号是否可用。
     private static final String ENABLED = "ENABLED";
 
     private final UserMapper userMapper;
+    private final RbacService rbacService;
 
     /**
      * 构造方法由 Spring 注入用户数据访问对象。
-     * 它把 UserMapper.java 提供的查库能力交给当前服务，用于每次请求加载用户状态。
+     * 它把 UserMapper.java 和 RbacService.java 的能力交给当前服务，用于每次请求加载用户状态和权限。
      *
      * @param userMapper 来自 UserMapper.java，用于根据用户 ID 查询 users 表。
+     * @param rbacService 来自 RbacService.java，用于根据用户 ID 查询角色和权限。
      */
-    public UserAccessService(UserMapper userMapper) {
+    public UserAccessService(UserMapper userMapper, RbacService rbacService) {
         this.userMapper = userMapper;
+        this.rbacService = rbacService;
     }
 
     /**
@@ -43,7 +46,6 @@ public class UserAccessService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Stage 2 才会接入真实 RBAC 表。Stage 1 先返回默认 USER 角色，保证认证闭环可用。
-        return new CurrentUser(user.getId(), user.getUsername(), List.of("USER"), List.of());
+        return new CurrentUser(user.getId(), user.getUsername(), rbacService.loadRoleCodes(userId), rbacService.loadPermissionCodes(userId));
     }
 }

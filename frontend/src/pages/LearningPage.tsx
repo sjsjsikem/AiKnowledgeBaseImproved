@@ -1,3 +1,5 @@
+// lessons 是教程阶段主题列表。
+// 它在本项目中把 docs 中的学习路线转成前端可视化卡片。
 const lessons = [
   '统一响应、异常和 Trace ID',
   'BCrypt、JWT 与登录态恢复',

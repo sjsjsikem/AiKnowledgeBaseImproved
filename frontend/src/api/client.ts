@@ -42,6 +42,7 @@ export const apiClient = axios.create({
  * 它从 auth.ts 的 Zustand store 读取 accessToken，在本项目中避免页面组件重复拼接 Bearer Token。
  */
 apiClient.interceptors.request.use((config) => {
+  // token 来自 auth.ts 的 Zustand store，是后端 AuthResponse.java 返回的 accessToken。
   const token = useAuthStore.getState().accessToken;
   if (token) {
     // 教学重点：认证头在 Axios 拦截器集中处理，页面组件不需要知道 Token 如何拼接。
@@ -74,6 +75,7 @@ apiClient.interceptors.response.use(
  */
 export async function unwrap<T>(request: Promise<{ data: ApiResponse<T>; headers: Record<string, string> }>): Promise<T> {
   try {
+    // response 来自 Axios 请求 Promise，包含后端 ApiResponse.java 和响应头。
     const response = await request;
     if (response.data.code !== 0) {
       throw new ApiError(response.data.code, response.data.message, response.headers['x-trace-id']);
@@ -85,8 +87,11 @@ export async function unwrap<T>(request: Promise<{ data: ApiResponse<T>; headers
       throw error;
     }
     if (axios.isAxiosError<ApiResponse<null>>(error)) {
+      // traceId 来自后端 TraceIdFilter.java 写出的 X-Trace-Id，用于前后端排查同一次请求。
       const traceId = error.response?.headers?.['x-trace-id'];
+      // code 来自后端 ApiResponse.code 或 HTTP 状态码，用于前端错误分支和提示。
       const code = error.response?.data?.code ?? error.response?.status ?? 50000;
+      // message 来自后端 ApiResponse.message 或 Axios 错误消息，用于页面展示。
       const message = error.response?.data?.message ?? error.message;
       // traceId 保留下来后，前端报错截图可以和后端日志按同一次请求定位。
       throw new ApiError(code, message, traceId);

@@ -8,6 +8,7 @@ import com.aiknowledgebase.auth.entity.User;
 import com.aiknowledgebase.auth.mapper.UserMapper;
 import com.aiknowledgebase.common.BusinessException;
 import com.aiknowledgebase.common.ErrorCode;
+import com.aiknowledgebase.rbac.service.RbacService;
 import com.aiknowledgebase.security.CurrentUser;
 import com.aiknowledgebase.security.JwtService;
 import com.aiknowledgebase.security.SecurityUtils;
@@ -26,6 +27,7 @@ import java.util.List;
 @Service
 public class AuthService {
 
+    // ENABLED 是 users.status 的启用状态值，用于注册初始化和登录校验。
     private static final String ENABLED = "ENABLED";
 
     // userMapper 来自 UserMapper.java，用 MyBatis-Plus 操作 users 表。
@@ -34,19 +36,28 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     // jwtService 来自 JwtService.java，负责签发和解析登录 Token。
     private final JwtService jwtService;
+    // rbacService 来自 RbacService.java，负责注册默认角色和读取真实角色权限。
+    private final RbacService rbacService;
 
     /**
      * 构造方法由 Spring 自动注入认证业务需要的依赖。
-     * 它把用户数据访问、密码加密和 JWT 能力组合到 AuthService 中，支撑注册和登录流程。
+     * 它把用户数据访问、密码加密、JWT 和 RBAC 能力组合到 AuthService 中，支撑注册、登录和权限资料返回。
      *
      * @param userMapper 来自 UserMapper.java，用于查询和写入 users 表。
      * @param passwordEncoder 是 Spring Security 自带的 PasswordEncoder 接口，用于 BCrypt 密码处理。
      * @param jwtService 来自 JwtService.java，用于生成登录 Token。
+     * @param rbacService 来自 RbacService.java，用于分配默认角色和加载角色权限。
      */
-    public AuthService(UserMapper userMapper, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(
+            UserMapper userMapper,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            RbacService rbacService
+    ) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.rbacService = rbacService;
     }
 
     /**
@@ -74,6 +85,7 @@ public class AuthService {
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user);
+        rbacService.assignDefaultUserRole(user.getId());
 
         return issueToken(user);
     }
@@ -123,8 +135,7 @@ public class AuthService {
      */
     private AuthResponse issueToken(User user) {
         String token = jwtService.createToken(user.getId(), user.getUsername());
-        // Stage 2 接入 RBAC 后，这里的默认 USER 角色会替换为数据库中的真实角色和权限。
-        return new AuthResponse(token, toProfile(user, List.of("USER"), List.of()));
+        return new AuthResponse(token, toProfile(user, rbacService.loadRoleCodes(user.getId()), rbacService.loadPermissionCodes(user.getId())));
     }
 
     /**

@@ -33,11 +33,11 @@
 
 ## Stage 2：RBAC 与管理员基础
 
-- [ ] roles、permissions、user_roles、role_permissions 表。
-- [ ] 权限加载。
-- [ ] 管理员用户管理。
-- [ ] 管理员角色管理。
-- [ ] 管理员权限管理。
+- [x] roles、permissions、user_roles、role_permissions 表。
+- [x] 权限加载。
+- [x] 管理员用户管理。
+- [x] 管理员角色管理。
+- [x] 管理员权限管理。
 
 ## Stage 3：知识库与文档
 

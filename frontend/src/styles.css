@@ -241,6 +241,120 @@ h2 {
   padding: 18px;
 }
 
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+  gap: 16px;
+}
+
+.admin-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 18px;
+  background: rgba(255, 252, 244, 0.94);
+  border: 1px solid #d9d2c5;
+  border-radius: 8px;
+  box-shadow: 0 12px 26px rgba(46, 39, 28, 0.08);
+}
+
+.admin-panel-wide {
+  grid-row: span 2;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+}
+
+.panel-title span {
+  color: #53645f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-list,
+.permission-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-row,
+.role-card,
+.permission-list article {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #fffcf4;
+  border: 1px solid #d9d2c5;
+  border-radius: 8px;
+}
+
+.admin-row {
+  grid-template-columns: minmax(180px, 1fr) auto;
+}
+
+.admin-row strong,
+.role-card strong,
+.permission-list strong {
+  color: #172421;
+}
+
+.admin-row span,
+.role-card span,
+.permission-list span,
+.admin-row small,
+.role-card p,
+.permission-list p {
+  color: #53645f;
+  line-height: 1.55;
+}
+
+.admin-row small {
+  display: block;
+}
+
+.inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: start;
+}
+
+.check-list {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+
+.check-list label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  color: #32443f;
+  background: #f3f0e8;
+  border: 1px solid #d9d2c5;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.compact-form {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-form input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #c9c1b4;
+  border-radius: 6px;
+}
+
 .auth-shell {
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1fr);
@@ -312,8 +426,13 @@ h2 {
 
   .status-grid,
   .lesson-grid,
-  .editor-shell {
+  .editor-shell,
+  .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-panel-wide {
+    grid-row: auto;
   }
 
   .editor-shell textarea {

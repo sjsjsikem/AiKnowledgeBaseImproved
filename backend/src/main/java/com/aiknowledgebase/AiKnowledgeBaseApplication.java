@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 它通过 Spring Boot 自带的启动器加载 Web、Security、MyBatis 等模块，在本项目中负责启动整个 Java 后端服务。
  */
 @SpringBootApplication
-@MapperScan("com.aiknowledgebase.auth.mapper")
+@MapperScan({"com.aiknowledgebase.auth.mapper", "com.aiknowledgebase.rbac.mapper"})
 public class AiKnowledgeBaseApplication {
 
     /**

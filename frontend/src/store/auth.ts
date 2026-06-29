@@ -30,8 +30,11 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
+      // roles 是当前用户角色编码列表，来自后端 UserProfile.roles。
       roles: [],
+      // permissions 是当前用户权限编码列表，来自后端 UserProfile.permissions。
       permissions: [],
+      // setAuth 接收登录/注册接口返回的 AuthResponse，并建立完整前端登录态。
       setAuth: (payload) =>
         set({
           accessToken: payload.accessToken,
@@ -39,10 +42,13 @@ export const useAuthStore = create<AuthState>()(
           roles: payload.user.roles,
           permissions: payload.user.permissions,
         }),
+      // setUser 接收 /users/me 返回的 UserProfile，并刷新用户资料、角色和权限。
       setUser: (user) => set({ user, roles: user.roles, permissions: user.permissions }),
+      // clear 重置 Token、用户资料、角色和权限，用于退出登录和 401 失效处理。
       clear: () => set({ accessToken: undefined, user: undefined, roles: [], permissions: [] }),
     }),
     {
+      // name 是 Zustand persist 的本地存储键，用于在 localStorage 中保存登录态。
       name: 'ai-kb-auth',
     },
   ),

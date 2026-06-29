@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -56,6 +57,12 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/admin/users/**").hasAuthority("admin:user:read")
+                        .requestMatchers(HttpMethod.PATCH, "/admin/users/**").hasAuthority("admin:user:write")
+                        .requestMatchers(HttpMethod.PUT, "/admin/users/**").hasAuthority("admin:user:write")
+                        .requestMatchers(HttpMethod.GET, "/admin/roles/**", "/admin/permissions/**").hasAuthority("admin:role:read")
+                        .requestMatchers(HttpMethod.POST, "/admin/roles/**").hasAuthority("admin:role:write")
+                        .requestMatchers(HttpMethod.PUT, "/admin/roles/**").hasAuthority("admin:role:write")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         // 教学重点：Spring Security 的 401/403 默认响应不是项目统一结构，这里手动写成 ApiResponse。

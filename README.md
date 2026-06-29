@@ -4,7 +4,7 @@
 
 ## 当前实施阶段
 
-当前仓库处于 **Stage 1：认证与当前用户**。
+当前仓库处于 **Stage 2：RBAC 与管理员基础**。
 
 已实现目标：
 
@@ -15,8 +15,9 @@
 - 后端统一响应、错误码、业务异常、全局异常、Trace ID、请求日志、健康检查、OpenAPI。
 - 前端 API 客户端、响应解包、登录态 store、路由结构、登录/注册/知识库/文档/后台阶段入口。
 - 用户注册、登录、JWT 认证、当前用户和退出登录。
+- RBAC 表结构、管理员种子账号、角色权限加载、后台用户启停、用户角色分配、角色权限分配。
 
-Stage 2 将实现 RBAC 与管理员基础。
+Stage 3 将实现知识库与文档。
 
 ## 技术栈
 
@@ -112,6 +113,21 @@ mvn spring-boot:run
 - Current User: `GET /api/users/me`
 - Logout: `POST /api/auth/logout`
 
+本地演示管理员账号：
+
+- Username: `admin`
+- Password: `Admin123456`
+
+管理员接口：
+
+- Users: `GET /api/admin/users`
+- Update User Status: `PATCH /api/admin/users/{userId}/status`
+- Update User Roles: `PUT /api/admin/users/{userId}/roles`
+- Roles: `GET /api/admin/roles`
+- Create Role: `POST /api/admin/roles`
+- Update Role Permissions: `PUT /api/admin/roles/{roleId}/permissions`
+- Permissions: `GET /api/admin/permissions`
+
 ## 启动前端
 
 ```powershell
@@ -125,6 +141,7 @@ npm run dev
 
 ```text
 http://localhost:5173
+http://127.0.0.1:5173
 ```
 
 前端开发服务器已将 `/api` 代理到 `http://localhost:8080`。

@@ -72,3 +72,75 @@ export interface RegisterPayload {
   nickname: string;
   email?: string;
 }
+
+/**
+ * AdminUser 对应后端 AdminUserResponse.java。
+ * 它由管理员用户列表接口返回，在本项目中展示用户状态、角色和权限。
+ */
+export interface AdminUser {
+  id: number;
+  username: string;
+  nickname: string;
+  email?: string;
+  status: string;
+  roles: string[];
+  permissions: string[];
+}
+
+/**
+ * Role 对应后端 RoleResponse.java。
+ * 它由后台角色接口返回，在本项目中用于用户角色分配和角色权限分配。
+ */
+export interface Role {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  status: string;
+  permissions: string[];
+}
+
+/**
+ * Permission 对应后端 PermissionResponse.java。
+ * 它由后台权限接口返回，在本项目中作为角色授权的权限字典。
+ */
+export interface Permission {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * UpdateUserStatusPayload 对应后端 UpdateUserStatusRequest.java。
+ * 它由 AdminPage.tsx 创建，在本项目中作为用户启停接口请求体。
+ */
+export interface UpdateUserStatusPayload {
+  status: 'ENABLED' | 'DISABLED';
+}
+
+/**
+ * UpdateUserRolesPayload 对应后端 UpdateUserRolesRequest.java。
+ * 它由 AdminPage.tsx 创建，在本项目中作为用户角色分配接口请求体。
+ */
+export interface UpdateUserRolesPayload {
+  roleIds: number[];
+}
+
+/**
+ * CreateRolePayload 对应后端 CreateRoleRequest.java。
+ * 它由 AdminPage.tsx 的角色表单创建，在本项目中作为创建角色接口请求体。
+ */
+export interface CreateRolePayload {
+  code: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * UpdateRolePermissionsPayload 对应后端 UpdateRolePermissionsRequest.java。
+ * 它由 AdminPage.tsx 创建，在本项目中作为角色权限分配接口请求体。
+ */
+export interface UpdateRolePermissionsPayload {
+  permissionIds: number[];
+}

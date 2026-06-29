@@ -7,9 +7,14 @@ import { StageNotice } from '../components/StageNotice';
  * 它使用 TanStack Query 调用 system.ts 的系统信息接口，在本项目中先验证前后端连通，Stage 3 再扩展为真实知识库 CRUD。
  */
 export function KnowledgeBasesPage() {
+  // systemInfoQuery 使用 TanStack Query 调用 system.ts 的 fetchSystemInfo。
+  // 它在本项目中验证前端能否通过 Axios 访问后端统一响应接口。
   const { data, isLoading, error } = useQuery({
+    // queryKey 是 TanStack Query 自带缓存键，用于标识系统信息接口缓存。
     queryKey: ['system-info'],
+    // queryFn 调用 fetchSystemInfo，把当前页面连接到 SystemInfoController.java。
     queryFn: fetchSystemInfo,
+    // retry 是 TanStack Query 自带重试配置，避免开发环境接口短暂失败时无限重试。
     retry: 1,
   });
 

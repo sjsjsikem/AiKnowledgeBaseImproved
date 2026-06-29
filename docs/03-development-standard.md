@@ -50,13 +50,13 @@ public class AuthService {
 }
 ```
 
-### 方法和参数注释
+### 方法、参数和业务变量注释
 
-所有业务源码中的业务方法、构造方法、关键私有方法、依赖字段和业务入参都要添加简短注释，说明：
+所有业务源码中的业务方法、构造方法、关键私有方法、依赖字段、业务入参和业务变量都要添加简短注释，说明：
 
 - 这段代码使用的是什么代码或对象。
 - 如果来自其他文件，注明来自哪个文件；如果是 Java/Spring/第三方库自带能力，说明是 Java、Spring 或对应库提供的能力。
-- 这个方法或参数通过什么操作，在本项目中发挥什么作用。
+- 这个方法、参数或变量通过什么操作，在本项目中发挥什么作用。
 
 示例：
 
@@ -73,10 +73,24 @@ public AuthResponse register(RegisterRequest request) {
 }
 ```
 
+前端业务变量示例：
+
+```tsx
+// usersQuery 使用 TanStack Query 的 useQuery，并调用 admin.ts 中的 fetchAdminUsers。
+// 它在本项目中负责缓存和刷新管理员后台的用户分页数据。
+const usersQuery = useQuery({
+  // queryKey 是 TanStack Query 自带缓存键，用于标识后台用户列表缓存。
+  queryKey: ['admin-users'],
+  // queryFn 调用 fetchAdminUsers，在本项目中把页面查询动作连接到 AdminRbacController.java。
+  queryFn: () => fetchAdminUsers(1, 20),
+});
+```
+
 ### 注释限制
 
 - 注释要短，优先解释“项目作用”和“链路位置”，不要逐行翻译代码。
-- “每个参数”指业务 DTO 参数、Controller/Service 方法参数、组件 Props 和关键事件参数；普通局部变量、简单 JSX 属性、lambda 临时变量不强制逐个注释。
+- “参数/变量”包括业务 DTO 参数、Controller/Service 方法参数、组件 Props、关键事件参数、前端 Hook 状态、Query/Mutation 配置对象、派生展示数据、后端依赖字段和关键业务常量。
+- 普通循环变量、简单 JSX 属性、lambda 临时变量、显而易见的字符串拼接不强制逐个注释。
 - DTO、Entity、Mapper 可以用类注释和字段/record 参数注释说明职责，不需要给简单 getter/setter 写注释。
 - `pom.xml`、`package-lock.json`、构建产物、自动生成文件不按业务注释规范处理。
 - 普通字段赋值不需要行内注释，除非它体现安全、事务、权限、缓存、AI 或 RAG 的关键设计。
