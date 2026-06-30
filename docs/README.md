@@ -56,24 +56,39 @@ AI：
 .
 ├── backend/                 # Spring Boot 后端工程
 ├── docker/                  # MySQL、Redis 等本地基础设施
-├── docs/                    # PRD、架构、规范、学习路线、阶段清单和 ADR
+├── docs/                    # 项目蓝图、README、PRD、架构、规范、阶段清单、验收文档和 ADR
+│   ├── PLAN.md              # 用户确认后的项目蓝图
+│   ├── README.md            # 当前阶段、启动方式、接口入口和开发纪律
+│   ├── 00-project-brief.md  # 项目定位和目标能力
+│   ├── 01-prd.md            # 产品范围和验收主流程
+│   ├── 02-architecture.md   # 架构和模块边界
+│   ├── 03-development-standard.md
+│   ├── 04-database-design.md
+│   ├── 05-api-contract.md
+│   ├── 07-ai-collaboration-rules.md
+│   ├── 08-stage-checklists.md
+│   ├── stage-*-acceptance.md
+│   └── adr/
 ├── frontend/                # React 前端工程
-├── scripts/                 # 本地启动/停止脚本
-├── PLAN.md                  # 用户确认后的项目蓝图
-└── README.md
+└── scripts/                 # 本地启动/停止脚本
 ```
 
 ## 必读文档
 
 继续开发前按顺序阅读：
 
-1. `PLAN.md`
-2. `docs/00-project-brief.md`
-3. `docs/01-prd.md`
-4. `docs/02-architecture.md`
-5. `docs/03-development-standard.md`
-6. `docs/07-ai-collaboration-rules.md`
-7. `docs/08-stage-checklists.md`
+1. `docs/PLAN.md`
+2. `docs/README.md`
+3. `docs/00-project-brief.md`
+4. `docs/01-prd.md`
+5. `docs/02-architecture.md`
+6. `docs/03-development-standard.md`
+7. `docs/04-database-design.md`
+8. `docs/05-api-contract.md`
+9. `docs/07-ai-collaboration-rules.md`
+10. `docs/08-stage-checklists.md`
+11. 当前阶段验收文档，例如 `docs/stage-{n}-acceptance.md`
+12. `docs/adr/` 下所有已接受的 ADR
 
 ## 启动基础设施
 
@@ -174,4 +189,6 @@ http://127.0.0.1:5173
 - Entity 不直接暴露给前端。
 - Controller 不写复杂业务逻辑。
 - 复杂代码写教学注释，普通 CRUD 不写无意义注释。
-- 每个阶段结束必须更新 `docs/08-stage-checklists.md` 和 `docs/06-learning-guide.md`。
+- 每个阶段结束必须更新 `docs/README.md`、`docs/08-stage-checklists.md` 和当前阶段验收文档。
+- 涉及接口或表结构时，必须同步更新 `docs/05-api-contract.md` 和 `docs/04-database-design.md`。
+- `docs/06-learning-guide.md` 已移除，不再作为 Agent 开发输入；后续不得读取、更新或重建该文件。

@@ -6,7 +6,7 @@
 
 ## 已完成
 
-- 项目蓝图保留在 `PLAN.md`。
+- 项目蓝图保留在 `docs/PLAN.md`。
 - README 和 docs 规范体系已创建。
 - 后端 Spring Boot 工程可编译并通过测试。
 - 前端 React 工程可安装依赖并完成生产构建。

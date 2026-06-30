@@ -2,15 +2,17 @@
 
 ## 通用阶段门禁
 
-- [ ] 每阶段开始前先读 `PLAN.md`、`00-project-brief.md`、`02-architecture.md`、`03-development-standard.md`。
+- [ ] 每阶段开始前先读 `docs/PLAN.md`、`docs/README.md`、`docs/00-project-brief.md`、`docs/01-prd.md`、`docs/02-architecture.md`、`docs/03-development-standard.md`、`docs/04-database-design.md`、`docs/05-api-contract.md`、`docs/07-ai-collaboration-rules.md`、`docs/08-stage-checklists.md`。
+- [ ] 每阶段开始前读取当前阶段验收文档；如阶段新增 ADR，必须同时读取 `docs/adr/` 下所有已接受的 ADR。
 - [ ] 每阶段新增或修改业务源码时，必须按 `03-development-standard.md` 的教程型注释规范补齐类、组件、业务方法和业务入参说明。
-- [ ] 每阶段结束必须更新 API、数据库、学习路线和验收文档。
+- [ ] 每阶段结束必须更新 API 契约、数据库设计、阶段清单、阶段验收文档和 `docs/README.md` 当前状态。
+- [ ] `docs/06-learning-guide.md` 已移除；后续阶段不读取、不更新、不重建。
 - [ ] 每阶段结束必须运行对应测试。
 
 ## Stage 0：规范与工程骨架
 
-- [x] 上传并保留 `PLAN.md`。
-- [x] 创建 README。
+- [x] 上传并保留 `docs/PLAN.md`。
+- [x] 创建 `docs/README.md`。
 - [x] 创建 docs 规范体系。
 - [x] 创建 ADR 目录和基础决策。
 - [x] 创建 Spring Boot 后端基础工程。

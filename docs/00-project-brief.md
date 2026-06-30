@@ -26,9 +26,11 @@
 
 - `docs/` 是项目的长期规范中心。
 - `adr/` 记录关键架构决策。
-- `06-learning-guide.md` 解释整体流程。
+- `docs/PLAN.md` 保存项目蓝图、阶段顺序和长期技术范围。
+- `docs/README.md` 保存当前项目状态、目录结构、启动方式和接口入口。
+- `docs/08-stage-checklists.md` 保存阶段门禁、阶段进度和验收同步要求。
 - 代码只在重难点处写教学注释。
-- `07-ai-collaboration-rules.md` 约束后续 AI 协作。
+- `docs/07-ai-collaboration-rules.md` 约束后续 AI 协作。
 
 ## 技术路线
 

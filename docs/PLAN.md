@@ -10,7 +10,7 @@
 - AI：OpenAI 兼容接口 Provider，可切换 OpenAI、DeepSeek、通义等兼容服务。
 - 架构：单体优先，但按企业级模块边界组织，包含认证、RBAC、知识库、文档、版本、附件、缓存、RAG、流式 AI、管理员后台、Docker 部署。
 
-核心改进点：项目内必须把 PRD、规范、架构决策、开发流程、学习路线和 AI 协作上下文固化为文档，避免上下文丢失后开发偏离。
+核心改进点：项目内必须把 PRD、规范、架构决策、开发流程、阶段验收和 AI 协作上下文固化为文档，避免上下文丢失后开发偏离。
 
 ## Key Changes
 
@@ -21,9 +21,10 @@
   - `03-development-standard.md`：编码、接口、异常、日志、事务、测试、注释规范。
   - `04-database-design.md`：MySQL 表结构、索引、Flyway 迁移规则、初始化数据。
   - `05-api-contract.md`：REST API、统一响应、分页、错误码、认证头。
-  - `06-learning-guide.md`：每阶段学习重点、阅读顺序、重难点代码索引。
   - `07-ai-collaboration-rules.md`：AI 继续开发前必须读取的上下文恢复规则。
   - `08-stage-checklists.md`：每阶段开发、测试、文档、验收清单。
+  - `stage-{n}-acceptance.md`：每个阶段的验收范围、验收步骤、验证命令和学习重点。
+  - `docs/README.md`：当前阶段、目录结构、启动方式和主要接口入口。
   - `adr/`：记录架构决策，例如为何用单体、为何第一版用 MySQL、为何通过 Provider 抽象 AI。
 
 - 后端模块建议：
@@ -53,7 +54,7 @@
   - 再实现后端接口和数据库迁移。
   - 再实现前端页面和接口联调。
   - 再补充测试、手动验收记录和学习讲解。
-  - 最后更新 `08-stage-checklists.md` 和 `06-learning-guide.md`。
+  - 最后更新 `docs/README.md`、`docs/08-stage-checklists.md` 和当前阶段验收文档；如涉及接口或表结构，同步 `docs/05-api-contract.md`、`docs/04-database-design.md`。
 
 - 阶段 0：规范与工程骨架
   - 建立 Spring Boot、React、Docker、MySQL、Redis、Flyway、OpenAPI。
@@ -76,7 +77,7 @@
   - 重点讲解所有权校验、DTO/Entity 边界、事务边界。
 
 - 阶段 4：附件与版本历史
-  - 附件上传、文件元数据、文档版本快照、版本回滚。
+  - 附件上传、文件元数据、文档版本快照、版本回滚、版本删除。
   - 重点讲解文件安全、路径校验、历史版本设计、乐观锁思路。
 
 - 阶段 5：缓存与性能
@@ -140,7 +141,7 @@
   - 页面可演示。
   - Swagger 可验证接口。
   - 数据库迁移可从空库执行。
-  - README 和对应 docs 已更新。
+- `docs/README.md` 和对应 docs 已更新。
   - 重难点代码有教学注释。
   - 阶段清单全部完成。
 
@@ -150,4 +151,4 @@
 - 技术栈固定为 `Spring Boot + React + MySQL + Flyway`。
 - AI 接入固定采用 OpenAI 兼容接口，并保留 Mock Provider。
 - 教学方式采用“整体流程讲解 + 重难点代码注释”，不做逐行注释。
-- 当前 `AiKnowledgeBaseImproved` 目录为空，适合按此蓝图从零创建新版项目。
+- 当前 `AiKnowledgeBaseImproved` 已按此蓝图推进到 Stage 4；后续阶段必须继续以 `docs/` 作为规范入口。
