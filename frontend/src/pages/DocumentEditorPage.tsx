@@ -1,13 +1,25 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createDocument, fetchDocument, fetchKnowledgeBases, updateDocument } from '../api/knowledge';
+import {
+  createDocument,
+  deleteAttachment,
+  deleteDocumentVersion,
+  downloadAttachment,
+  fetchAttachments,
+  fetchDocument,
+  fetchDocumentVersions,
+  fetchKnowledgeBases,
+  rollbackDocumentVersion,
+  updateDocument,
+  uploadAttachment,
+} from '../api/knowledge';
 import { ApiError } from '../api/client';
-import type { DocumentDetail } from '../types/api';
+import type { Attachment, DocumentDetail, DocumentVersion } from '../types/api';
 
 /**
- * DocumentEditorPage 是 Stage 3 的 Markdown 文档编辑器。
- * 它使用 knowledge.ts 的文档 API、React Router 路由参数和 TanStack Query，在本项目中实现文档新建、加载、保存和预览。
+ * DocumentEditorPage 是 Stage 4 的 Markdown 文档编辑器。
+ * 它使用 knowledge.ts 的文档、附件和版本 API，在本项目中实现文档保存、附件上传、版本历史和回滚。
  */
 export function DocumentEditorPage() {
   // navigate 来自 React Router，用于文档新建成功后跳转到已有文档编辑路由。
@@ -38,6 +50,10 @@ export function DocumentEditorPage() {
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
   // error 使用 React 自带 useState 保存编辑器保存或加载失败消息。
   const [error, setError] = useState('');
+  // attachmentError 使用 React 自带 useState 保存附件上传、下载或删除失败消息。
+  const [attachmentError, setAttachmentError] = useState('');
+  // versionError 使用 React 自带 useState 保存版本历史加载或回滚失败消息。
+  const [versionError, setVersionError] = useState('');
 
   // knowledgeBasesQuery 使用 TanStack Query 的 useQuery，并调用 knowledge.ts 中的 fetchKnowledgeBases。
   // 它在本项目中为新建文档选择所属知识库提供选项。
@@ -56,6 +72,28 @@ export function DocumentEditorPage() {
     // queryFn 调用 fetchDocument，把编辑器连接到 KnowledgeController.java 的文档详情接口。
     queryFn: () => fetchDocument(routeDocumentId as number),
     // enabled 使用 TanStack Query 自带开关，只有编辑已有文档时才请求详情。
+    enabled: editingExisting,
+  });
+
+  // versionsQuery 使用 TanStack Query 的 useQuery，并调用 knowledge.ts 中的 fetchDocumentVersions。
+  // 它在本项目中为已有文档加载版本历史，新建文档保存前不会请求。
+  const versionsQuery = useQuery({
+    // queryKey 是 TanStack Query 自带缓存键，routeDocumentId 区分不同文档的版本历史。
+    queryKey: ['document-versions', routeDocumentId],
+    // queryFn 调用 fetchDocumentVersions，把编辑器连接到 KnowledgeController.java 的版本列表接口。
+    queryFn: () => fetchDocumentVersions(routeDocumentId as number),
+    // enabled 使用 TanStack Query 自带开关，只有已有文档才显示版本历史。
+    enabled: editingExisting,
+  });
+
+  // attachmentsQuery 使用 TanStack Query 的 useQuery，并调用 knowledge.ts 中的 fetchAttachments。
+  // 它在本项目中为已有文档加载附件列表，新建文档保存前不会请求。
+  const attachmentsQuery = useQuery({
+    // queryKey 是 TanStack Query 自带缓存键，routeDocumentId 区分不同文档的附件列表。
+    queryKey: ['document-attachments', routeDocumentId],
+    // queryFn 调用 fetchAttachments，把编辑器连接到 KnowledgeController.java 的附件列表接口。
+    queryFn: () => fetchAttachments(routeDocumentId as number),
+    // enabled 使用 TanStack Query 自带开关，只有已有文档才显示附件列表。
     enabled: editingExisting,
   });
 
@@ -93,11 +131,78 @@ export function DocumentEditorPage() {
       queryClient.invalidateQueries({ queryKey: ['knowledge-bases'] });
       queryClient.invalidateQueries({ queryKey: ['documents', savedDocument.knowledgeBaseId] });
       queryClient.invalidateQueries({ queryKey: ['document', savedDocument.id] });
+      queryClient.invalidateQueries({ queryKey: ['document-versions', savedDocument.id] });
       navigate(`/documents/${savedDocument.id}`);
     },
     // onError 操作失败后统一展示 ApiError 或通用错误文案。
     onError: (err) => {
       setError(err instanceof ApiError ? err.message : '文档保存失败');
+    },
+  });
+
+  // rollbackMutation 使用 TanStack Query 的 useMutation，并调用 knowledge.ts 中的 rollbackDocumentVersion。
+  // 它在本项目中把版本面板的回滚按钮转换为后端版本恢复请求。
+  const rollbackMutation = useMutation({
+    // mutationFn 接收版本 ID，并调用后端版本回滚接口恢复当前文档。
+    mutationFn: (versionId: number) => rollbackDocumentVersion(routeDocumentId as number, versionId),
+    // onSuccess 回滚成功后刷新当前文档、版本历史和文档列表，并同步编辑器表单状态。
+    onSuccess: (rolledBackDocument: DocumentDetail) => {
+      setTitle(rolledBackDocument.title);
+      setSummary(rolledBackDocument.summary ?? '');
+      setStatus(rolledBackDocument.status);
+      setContent(rolledBackDocument.content);
+      queryClient.invalidateQueries({ queryKey: ['document', rolledBackDocument.id] });
+      queryClient.invalidateQueries({ queryKey: ['document-versions', rolledBackDocument.id] });
+      queryClient.invalidateQueries({ queryKey: ['documents', rolledBackDocument.knowledgeBaseId] });
+    },
+    // onError 操作失败后展示版本回滚错误。
+    onError: (err) => {
+      setVersionError(err instanceof ApiError ? err.message : '版本回滚失败');
+    },
+  });
+
+  // deleteVersionMutation 使用 TanStack Query 的 useMutation，并调用 knowledge.ts 中的 deleteDocumentVersion。
+  // 它在本项目中把版本面板的删除按钮转换为后端版本快照删除请求。
+  const deleteVersionMutation = useMutation({
+    // mutationFn 接收版本 ID，并调用后端版本删除接口清理 document_versions 记录。
+    mutationFn: (versionId: number) => deleteDocumentVersion(routeDocumentId as number, versionId),
+    // onSuccess 删除成功后刷新当前文档的版本历史列表。
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-versions', routeDocumentId] });
+    },
+    // onError 操作失败后展示版本删除错误。
+    onError: (err) => {
+      setVersionError(err instanceof ApiError ? err.message : '版本删除失败');
+    },
+  });
+
+  // uploadMutation 使用 TanStack Query 的 useMutation，并调用 knowledge.ts 中的 uploadAttachment。
+  // 它在本项目中把浏览器 File 对象上传到后端附件接口。
+  const uploadMutation = useMutation({
+    // mutationFn 接收 File，并调用后端文档附件上传接口。
+    mutationFn: (file: File) => uploadAttachment(routeDocumentId as number, file),
+    // onSuccess 上传成功后刷新当前文档附件列表。
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-attachments', routeDocumentId] });
+    },
+    // onError 操作失败后展示附件上传错误。
+    onError: (err) => {
+      setAttachmentError(err instanceof ApiError ? err.message : '附件上传失败');
+    },
+  });
+
+  // deleteAttachmentMutation 使用 TanStack Query 的 useMutation，并调用 knowledge.ts 中的 deleteAttachment。
+  // 它在本项目中把附件删除按钮转换为后端附件删除请求。
+  const deleteAttachmentMutation = useMutation({
+    // mutationFn 接收附件 ID，并调用后端附件删除接口。
+    mutationFn: deleteAttachment,
+    // onSuccess 删除成功后刷新当前文档附件列表。
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-attachments', routeDocumentId] });
+    },
+    // onError 操作失败后展示附件删除错误。
+    onError: (err) => {
+      setAttachmentError(err instanceof ApiError ? err.message : '附件删除失败');
     },
   });
 
@@ -122,6 +227,41 @@ export function DocumentEditorPage() {
     event.preventDefault();
     setError('');
     saveMutation.mutate();
+  }
+
+  /**
+   * handleUploadAttachment 处理附件上传文件选择。
+   * 它接收浏览器 change 事件中的 File 并调用 uploadMutation，在本项目中完成编辑器附件上传。
+   *
+   * @param file 浏览器文件选择控件返回的 File 对象。
+   */
+  function handleUploadAttachment(file: File) {
+    setAttachmentError('');
+    uploadMutation.mutate(file);
+  }
+
+  /**
+   * handleDownloadAttachment 处理附件下载点击。
+   * 它调用 knowledge.ts 的 downloadAttachment 并创建临时 Blob 链接，在本项目中保留带 Token 的 Axios 下载流程。
+   *
+   * @param attachment 来自 AttachmentResponse.java 的附件数据。
+   */
+  async function handleDownloadAttachment(attachment: Attachment) {
+    try {
+      setAttachmentError('');
+      // blob 来自附件下载接口返回的文件内容，用于生成浏览器临时下载 URL。
+      const blob = await downloadAttachment(attachment.id);
+      // url 使用浏览器 URL.createObjectURL 生成临时文件地址，用完后需要释放。
+      const url = window.URL.createObjectURL(blob);
+      // link 是临时 a 标签，用于触发浏览器下载并保留原始文件名。
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = attachment.originalFilename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setAttachmentError(err instanceof ApiError ? err.message : '附件下载失败');
+    }
   }
 
   return (
@@ -183,6 +323,175 @@ export function DocumentEditorPage() {
           </article>
         </div>
       </form>
+
+      <div className="document-tools-grid">
+        <AttachmentPanel
+          attachments={attachmentsQuery.data ?? []}
+          disabled={!editingExisting}
+          error={attachmentError || (attachmentsQuery.error instanceof ApiError ? attachmentsQuery.error.message : '')}
+          loading={attachmentsQuery.isLoading}
+          uploading={uploadMutation.isPending}
+          deleting={deleteAttachmentMutation.isPending}
+          onUpload={handleUploadAttachment}
+          onDownload={handleDownloadAttachment}
+          onDelete={(attachmentId) => deleteAttachmentMutation.mutate(attachmentId)}
+        />
+        <VersionHistoryPanel
+          versions={versionsQuery.data ?? []}
+          disabled={!editingExisting}
+          error={versionError || (versionsQuery.error instanceof ApiError ? versionsQuery.error.message : '')}
+          loading={versionsQuery.isLoading}
+          rollingBack={rollbackMutation.isPending}
+          deleting={deleteVersionMutation.isPending}
+          onRollback={(versionId) => rollbackMutation.mutate(versionId)}
+          onDelete={(versionId) => deleteVersionMutation.mutate(versionId)}
+        />
+      </div>
+    </section>
+  );
+}
+
+/**
+ * AttachmentPanel 是文档编辑器的附件管理面板。
+ * 它接收附件列表和上传/下载/删除方法，在本项目中把文件操作集中展示在文档详情页。
+ *
+ * @param attachments 来自 AttachmentResponse.java 的附件列表。
+ * @param disabled 当前是否禁止附件操作，新建文档保存前为 true。
+ * @param error 附件操作错误消息。
+ * @param loading 附件列表是否加载中。
+ * @param uploading 附件是否正在上传。
+ * @param deleting 附件是否正在删除。
+ * @param onUpload 父组件传入的附件上传方法。
+ * @param onDownload 父组件传入的附件下载方法。
+ * @param onDelete 父组件传入的附件删除方法。
+ */
+function AttachmentPanel({
+  attachments,
+  disabled,
+  error,
+  loading,
+  uploading,
+  deleting,
+  onUpload,
+  onDownload,
+  onDelete,
+}: {
+  attachments: Attachment[];
+  disabled: boolean;
+  error: string;
+  loading: boolean;
+  uploading: boolean;
+  deleting: boolean;
+  onUpload: (file: File) => void;
+  onDownload: (attachment: Attachment) => void;
+  onDelete: (attachmentId: number) => void;
+}) {
+  /**
+   * handleFileChange 处理文件选择控件变化。
+   * 它读取浏览器 FileList 的第一项并交给父组件上传，在本项目中连接 input[type=file] 和后端 multipart 接口。
+   *
+   * @param event 浏览器 input change 事件，携带用户选择的文件。
+   */
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    // file 来自浏览器 FileList 的第一项，用户取消选择时可能为空。
+    const file = event.target.files?.[0];
+    if (file) {
+      onUpload(file);
+      event.target.value = '';
+    }
+  }
+
+  return (
+    <section className="admin-panel">
+      <div className="panel-title">
+        <div>
+          <p className="eyebrow">Attachments</p>
+          <h2>附件</h2>
+        </div>
+        <span>{disabled ? '保存文档后可上传' : loading ? '加载中' : `${attachments.length} 个附件`}</span>
+      </div>
+      {error && <p className="form-error">{error}</p>}
+      <label className="file-picker">
+        选择附件
+        <input type="file" disabled={disabled || uploading} onChange={handleFileChange} />
+      </label>
+      <div className="document-list">
+        {!disabled && attachments.length === 0 && !loading && <p className="muted">还没有附件</p>}
+        {attachments.map((attachment) => (
+          <div className="document-row" key={attachment.id}>
+            <div>
+              <strong>{attachment.originalFilename}</strong>
+              <span>{formatBytes(attachment.sizeBytes)} · {attachment.contentType}</span>
+            </div>
+            <div className="button-row">
+              <button type="button" onClick={() => onDownload(attachment)}>下载</button>
+              <button type="button" disabled={deleting} onClick={() => onDelete(attachment.id)}>删除</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * VersionHistoryPanel 是文档编辑器的版本历史面板。
+ * 它接收版本列表和回滚方法，在本项目中让学习者看到每次保存都会形成可回滚快照。
+ *
+ * @param versions 来自 DocumentVersionResponse.java 的版本列表。
+ * @param disabled 当前是否禁止版本操作，新建文档保存前为 true。
+ * @param error 版本操作错误消息。
+ * @param loading 版本历史是否加载中。
+ * @param rollingBack 是否正在执行回滚。
+ * @param deleting 是否正在删除版本快照。
+ * @param onRollback 父组件传入的版本回滚方法。
+ * @param onDelete 父组件传入的版本删除方法。
+ */
+function VersionHistoryPanel({
+  versions,
+  disabled,
+  error,
+  loading,
+  rollingBack,
+  deleting,
+  onRollback,
+  onDelete,
+}: {
+  versions: DocumentVersion[];
+  disabled: boolean;
+  error: string;
+  loading: boolean;
+  rollingBack: boolean;
+  deleting: boolean;
+  onRollback: (versionId: number) => void;
+  onDelete: (versionId: number) => void;
+}) {
+  return (
+    <section className="admin-panel">
+      <div className="panel-title">
+        <div>
+          <p className="eyebrow">Versions</p>
+          <h2>版本历史</h2>
+        </div>
+        <span>{disabled ? '保存文档后生成' : loading ? '加载中' : `${versions.length} 个版本`}</span>
+      </div>
+      {error && <p className="form-error">{error}</p>}
+      <div className="document-list">
+        {!disabled && versions.length === 0 && !loading && <p className="muted">保存后会生成版本快照</p>}
+        {versions.map((version) => (
+          <div className="version-row" key={version.id}>
+            <div>
+              <strong>版本 {version.versionNo} · {version.title}</strong>
+              <span>{version.status} · {version.summary ?? '暂无摘要'}</span>
+              <p>{version.content.slice(0, 120)}</p>
+            </div>
+            <div className="button-row">
+              <button type="button" disabled={rollingBack} onClick={() => onRollback(version.id)}>回滚</button>
+              <button type="button" disabled={deleting} onClick={() => onDelete(version.id)}>删除</button>
+            </div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -213,4 +522,21 @@ function MarkdownPreview({ content }: { content: string }) {
       })}
     </div>
   );
+}
+
+/**
+ * formatBytes 把附件字节数转换为前端展示文本。
+ * 它使用 JavaScript 数字计算 KB/MB，在本项目中让附件列表更容易阅读。
+ *
+ * @param sizeBytes 来自 AttachmentResponse.java 的附件大小。
+ * @return 人类可读的文件大小文本。
+ */
+function formatBytes(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`;
 }

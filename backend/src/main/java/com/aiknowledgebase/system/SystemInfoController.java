@@ -26,7 +26,7 @@ public class SystemInfoController {
     public ApiResponse<Map<String, Object>> info() {
         return ApiResponse.success(Map.of(
                 "name", "ai-knowledge-base",
-                "stage", "stage-3-knowledge-documents",
+                "stage", "stage-4-attachments-versions",
                 "status", "running",
                 "time", OffsetDateTime.now().toString()
         ));

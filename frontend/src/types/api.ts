@@ -219,3 +219,33 @@ export interface UpdateDocumentPayload {
   status: 'DRAFT' | 'PUBLISHED';
   content: string;
 }
+
+/**
+ * DocumentVersion 对应后端 DocumentVersionResponse.java。
+ * 它由文档版本历史接口返回，在本项目中用于展示保存快照和执行版本回滚。
+ */
+export interface DocumentVersion {
+  id: number;
+  documentId: number;
+  versionNo: number;
+  title: string;
+  summary?: string;
+  status: 'DRAFT' | 'PUBLISHED';
+  content: string;
+  createdBy: number;
+  createdAt: string;
+}
+
+/**
+ * Attachment 对应后端 AttachmentResponse.java。
+ * 它由附件上传和列表接口返回，在本项目中展示附件元数据并定位下载接口。
+ */
+export interface Attachment {
+  id: number;
+  documentId: number;
+  originalFilename: string;
+  contentType: string;
+  sizeBytes: number;
+  downloadUrl: string;
+  createdAt: string;
+}

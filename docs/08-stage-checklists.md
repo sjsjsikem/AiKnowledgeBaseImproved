@@ -49,11 +49,12 @@
 
 ## Stage 4：附件与版本历史
 
-- [ ] attachments 表。
-- [ ] document_versions 表。
-- [ ] 附件上传。
-- [ ] 版本快照。
-- [ ] 版本回滚。
+- [x] attachments 表。
+- [x] document_versions 表。
+- [x] 附件上传。
+- [x] 版本快照。
+- [x] 版本回滚。
+- [x] 版本删除。
 
 ## Stage 5：缓存与性能
 

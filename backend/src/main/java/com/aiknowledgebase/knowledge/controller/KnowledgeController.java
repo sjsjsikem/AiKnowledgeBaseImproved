@@ -1,15 +1,21 @@
 package com.aiknowledgebase.knowledge.controller;
 
 import com.aiknowledgebase.common.ApiResponse;
+import com.aiknowledgebase.knowledge.dto.AttachmentResponse;
 import com.aiknowledgebase.knowledge.dto.CreateDocumentRequest;
 import com.aiknowledgebase.knowledge.dto.CreateKnowledgeBaseRequest;
 import com.aiknowledgebase.knowledge.dto.DocumentDetailResponse;
 import com.aiknowledgebase.knowledge.dto.DocumentSummaryResponse;
+import com.aiknowledgebase.knowledge.dto.DocumentVersionResponse;
 import com.aiknowledgebase.knowledge.dto.KnowledgeBaseResponse;
 import com.aiknowledgebase.knowledge.dto.UpdateDocumentRequest;
 import com.aiknowledgebase.knowledge.dto.UpdateKnowledgeBaseRequest;
 import com.aiknowledgebase.knowledge.service.KnowledgeService;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +23,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -172,6 +180,112 @@ public class KnowledgeController {
     @DeleteMapping("/documents/{documentId}")
     public ApiResponse<Void> deleteDocument(@PathVariable Long documentId) {
         knowledgeService.deleteDocument(documentId);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * listDocumentVersions 是文档版本历史接口。
+     * 它接收文档 ID 并调用 KnowledgeService 查询 document_versions，在本项目中支撑版本历史面板。
+     *
+     * @param documentId Spring MVC 从路径中读取的文档主键。
+     * @return ApiResponse 包装 DocumentVersionResponse 列表。
+     */
+    @GetMapping("/documents/{documentId}/versions")
+    public ApiResponse<List<DocumentVersionResponse>> listDocumentVersions(@PathVariable Long documentId) {
+        return ApiResponse.success(knowledgeService.listDocumentVersions(documentId));
+    }
+
+    /**
+     * rollbackDocumentVersion 是文档版本回滚接口。
+     * 它接收文档 ID 和版本 ID 并调用 KnowledgeService 恢复历史快照，在本项目中实现版本回滚。
+     *
+     * @param documentId Spring MVC 从路径中读取的文档主键。
+     * @param versionId Spring MVC 从路径中读取的版本主键。
+     * @return ApiResponse 包装回滚后的 DocumentDetailResponse。
+     */
+    @PostMapping("/documents/{documentId}/versions/{versionId}/rollback")
+    public ApiResponse<DocumentDetailResponse> rollbackDocumentVersion(
+            @PathVariable Long documentId,
+            @PathVariable Long versionId
+    ) {
+        return ApiResponse.success(knowledgeService.rollbackDocumentVersion(documentId, versionId));
+    }
+
+    /**
+     * deleteDocumentVersion 是文档版本删除接口。
+     * 它接收文档 ID 和版本 ID 并调用 KnowledgeService 删除历史快照，在本项目中支持用户清理不需要的版本历史。
+     *
+     * @param documentId Spring MVC 从路径中读取的文档主键。
+     * @param versionId Spring MVC 从路径中读取的版本主键。
+     * @return ApiResponse 包装空响应。
+     */
+    @DeleteMapping("/documents/{documentId}/versions/{versionId}")
+    public ApiResponse<Void> deleteDocumentVersion(
+            @PathVariable Long documentId,
+            @PathVariable Long versionId
+    ) {
+        knowledgeService.deleteDocumentVersion(documentId, versionId);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * listAttachments 是文档附件列表接口。
+     * 它接收文档 ID 并调用 KnowledgeService 查询 attachments，在本项目中支撑编辑器附件面板。
+     *
+     * @param documentId Spring MVC 从路径中读取的文档主键。
+     * @return ApiResponse 包装 AttachmentResponse 列表。
+     */
+    @GetMapping("/documents/{documentId}/attachments")
+    public ApiResponse<List<AttachmentResponse>> listAttachments(@PathVariable Long documentId) {
+        return ApiResponse.success(knowledgeService.listAttachments(documentId));
+    }
+
+    /**
+     * uploadAttachment 是文档附件上传接口。
+     * 它接收文档 ID 和 multipart 文件并调用 KnowledgeService 保存文件和元数据，在本项目中实现附件上传。
+     *
+     * @param documentId Spring MVC 从路径中读取的文档主键。
+     * @param file Spring MVC 从 multipart/form-data 中读取的文件参数。
+     * @return ApiResponse 包装新上传的 AttachmentResponse。
+     */
+    @PostMapping(value = "/documents/{documentId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<AttachmentResponse> uploadAttachment(
+            @PathVariable Long documentId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return ApiResponse.success(knowledgeService.uploadAttachment(documentId, file));
+    }
+
+    /**
+     * downloadAttachment 是附件下载接口。
+     * 它接收附件 ID 并调用 KnowledgeService 准备 Resource，在本项目中返回文件流而不是 ApiResponse JSON。
+     *
+     * @param attachmentId Spring MVC 从路径中读取的附件主键。
+     * @return ResponseEntity<Resource>，包含文件流和下载响应头。
+     */
+    @GetMapping("/attachments/{attachmentId}/download")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long attachmentId) {
+        // download 来自 KnowledgeService.AttachmentDownload，包含文件 Resource、原始文件名和 MIME 类型。
+        KnowledgeService.AttachmentDownload download = knowledgeService.prepareAttachmentDownload(attachmentId);
+        // encodedFilename 使用 KnowledgeService 的 UTF-8 编码方法生成 Content-Disposition 文件名。
+        String encodedFilename = knowledgeService.encodeDownloadFilename(download.originalFilename());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
+                .contentLength(download.sizeBytes())
+                .contentType(MediaType.parseMediaType(download.contentType()))
+                .body(download.resource());
+    }
+
+    /**
+     * deleteAttachment 是附件删除接口。
+     * 它接收附件 ID 并调用 KnowledgeService 删除元数据和文件，在本项目中支撑附件面板删除操作。
+     *
+     * @param attachmentId Spring MVC 从路径中读取的附件主键。
+     * @return ApiResponse 包装空响应。
+     */
+    @DeleteMapping("/attachments/{attachmentId}")
+    public ApiResponse<Void> deleteAttachment(@PathVariable Long attachmentId) {
+        knowledgeService.deleteAttachment(attachmentId);
         return ApiResponse.success(null);
     }
 }

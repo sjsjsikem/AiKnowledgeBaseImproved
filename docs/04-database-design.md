@@ -177,3 +177,49 @@ users -> knowledge_bases -> documents -> document_contents
 | `content` | Markdown 正文 |
 | `created_at` | 创建时间 |
 | `updated_at` | 更新时间 |
+
+## Stage 4 附件与版本历史表
+
+Stage 4 创建 `document_versions`、`attachments` 两张表，用于补齐文档编辑后的可追溯能力和附件管理能力：
+
+```text
+documents -> document_versions
+documents -> attachments
+```
+
+设计重点：
+
+- 每次创建或保存文档后写入一条 `document_versions` 快照。
+- 回滚不是删除历史，而是把历史快照恢复为当前文档后再生成一条新版本。
+- 版本删除用于清理不再需要的历史快照；删除前仍要校验文档所有权和版本归属。
+- `attachments` 只保存文件元数据和相对路径，真实文件存放在后端配置的附件目录。
+- 附件下载、删除和版本回滚都先通过文档所属知识库校验当前用户所有权。
+
+### document_versions
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 版本 ID |
+| `document_id` | 文档 ID |
+| `version_no` | 同一文档下递增的版本号 |
+| `title` | 该版本的标题快照 |
+| `summary` | 该版本的摘要快照 |
+| `status` | 该版本的状态快照 |
+| `content` | 该版本的 Markdown 正文快照 |
+| `created_by` | 创建该版本的用户 ID |
+| `created_at` | 版本创建时间 |
+
+### attachments
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 附件 ID |
+| `document_id` | 文档 ID |
+| `original_filename` | 用户上传时的原始文件名 |
+| `stored_filename` | 后端生成的安全存储文件名 |
+| `content_type` | 文件 MIME 类型 |
+| `size_bytes` | 文件大小 |
+| `storage_path` | 相对附件根目录的存储路径 |
+| `deleted` | 逻辑删除标记 |
+| `created_at` | 上传时间 |
+| `updated_at` | 更新时间 |

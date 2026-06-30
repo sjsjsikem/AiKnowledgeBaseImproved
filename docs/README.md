@@ -4,7 +4,7 @@
 
 ## 当前实施阶段
 
-当前仓库处于 **Stage 3：知识库与文档**。
+当前仓库处于 **Stage 4：附件与版本历史**。
 
 已实现目标：
 
@@ -17,8 +17,9 @@
 - 用户注册、登录、JWT 认证、当前用户和退出登录。
 - RBAC 表结构、管理员种子账号、角色权限加载、后台用户启停、用户角色分配、角色权限分配。
 - 知识库 CRUD、文档 CRUD、Markdown 编辑器、文档元数据与正文分表、当前用户所有权校验。
+- 附件上传、附件下载、附件删除、文档版本快照、版本历史、版本回滚和版本删除。
 
-Stage 4 将实现附件上传与文档版本历史。
+Stage 5 将实现 Redis 缓存与性能优化。
 
 ## 技术栈
 
@@ -140,6 +141,13 @@ mvn spring-boot:run
 - Document Detail: `GET /api/documents/{documentId}`
 - Save Document: `PUT /api/documents/{documentId}`
 - Delete Document: `DELETE /api/documents/{documentId}`
+- Document Versions: `GET /api/documents/{documentId}/versions`
+- Rollback Version: `POST /api/documents/{documentId}/versions/{versionId}/rollback`
+- Delete Version: `DELETE /api/documents/{documentId}/versions/{versionId}`
+- Attachments: `GET /api/documents/{documentId}/attachments`
+- Upload Attachment: `POST /api/documents/{documentId}/attachments`
+- Download Attachment: `GET /api/attachments/{attachmentId}/download`
+- Delete Attachment: `DELETE /api/attachments/{attachmentId}`
 
 ## 启动前端
 

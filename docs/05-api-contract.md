@@ -61,6 +61,7 @@ Authorization: Bearer <accessToken>
 - `/api/admin/**`
 - `/api/knowledge-bases/**`
 - `/api/documents/**`
+- `/api/attachments/**`
 - `/api/files/**`
 - `/api/ai/**`
 - `/api/rag/**`
@@ -394,6 +395,99 @@ PUT /api/documents/{documentId}
 
 ```text
 DELETE /api/documents/{documentId}
+```
+
+## Stage 4 附件与版本历史接口
+
+附件与版本接口均需要 JWT。它们不单独使用管理员权限，而是复用文档所属知识库的所有权校验。
+
+### 文档版本列表
+
+```text
+GET /api/documents/{documentId}/versions
+```
+
+响应 `data`：
+
+```json
+[
+  {
+    "id": 1,
+    "documentId": 1,
+    "versionNo": 2,
+    "title": "统一响应设计",
+    "summary": "ApiResponse、ErrorCode 和前端解包",
+    "status": "PUBLISHED",
+    "content": "# 统一响应\n\n后端统一返回 code/message/data。",
+    "createdBy": 1,
+    "createdAt": "2026-06-30T16:00:00"
+  }
+]
+```
+
+### 回滚文档版本
+
+```text
+POST /api/documents/{documentId}/versions/{versionId}/rollback
+```
+
+响应 `data` 为回滚后的文档详情。回滚成功后会新增一条版本快照，用于记录这次回滚操作。
+
+### 删除文档版本
+
+```text
+DELETE /api/documents/{documentId}/versions/{versionId}
+```
+
+删除前会校验文档所有权和版本归属。该接口用于清理过旧或不再需要的历史快照。
+
+### 附件列表
+
+```text
+GET /api/documents/{documentId}/attachments
+```
+
+响应 `data`：
+
+```json
+[
+  {
+    "id": 1,
+    "documentId": 1,
+    "originalFilename": "design-notes.pdf",
+    "contentType": "application/pdf",
+    "sizeBytes": 10240,
+    "downloadUrl": "/api/attachments/1/download",
+    "createdAt": "2026-06-30T16:10:00"
+  }
+]
+```
+
+### 上传附件
+
+```text
+POST /api/documents/{documentId}/attachments
+Content-Type: multipart/form-data
+```
+
+请求字段：
+
+```text
+file=<binary>
+```
+
+### 下载附件
+
+```text
+GET /api/attachments/{attachmentId}/download
+```
+
+该接口返回文件流，不使用统一 JSON 响应。前端通过 Axios 携带 `Authorization` 并以 Blob 接收。
+
+### 删除附件
+
+```text
+DELETE /api/attachments/{attachmentId}
 ```
 
 ## Trace ID
