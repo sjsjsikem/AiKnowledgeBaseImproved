@@ -126,3 +126,54 @@ Stage 2 初始化：
 - `admin:user:read`、`admin:user:write`、`admin:role:read`、`admin:role:write` 四个后台权限。
 - 本地演示账号 `admin / Admin123456`。
 - 所有已有用户补充 `USER` 角色。
+
+## Stage 3 知识库与文档表
+
+Stage 3 创建 `knowledge_bases`、`documents`、`document_contents` 三张表，用“知识库容器 -> 文档元数据 -> 文档正文”的结构表达内容管理关系：
+
+```text
+users -> knowledge_bases -> documents -> document_contents
+```
+
+设计重点：
+
+- `knowledge_bases.owner_id` 绑定当前用户，是知识库和文档访问控制的根。
+- `documents` 只保存标题、摘要、状态等元数据，列表接口不读取 Markdown 大字段。
+- `document_contents` 保存 Markdown 正文，与 `documents` 一对一。
+- Stage 3 先做个人知识库所有权；协作共享、附件和版本历史后续阶段扩展。
+
+### knowledge_bases
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 知识库 ID |
+| `owner_id` | 所属用户 ID |
+| `name` | 知识库名称 |
+| `description` | 知识库说明 |
+| `visibility` | 可见性，Stage 3 默认为 `PRIVATE` |
+| `deleted` | 逻辑删除标记 |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |
+
+### documents
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 文档 ID |
+| `knowledge_base_id` | 所属知识库 ID |
+| `title` | 文档标题 |
+| `summary` | 文档摘要 |
+| `status` | 文档状态，当前支持 `DRAFT`、`PUBLISHED` |
+| `deleted` | 逻辑删除标记 |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |
+
+### document_contents
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 正文 ID |
+| `document_id` | 文档 ID，唯一 |
+| `content` | Markdown 正文 |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |

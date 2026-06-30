@@ -144,3 +144,78 @@ export interface CreateRolePayload {
 export interface UpdateRolePermissionsPayload {
   permissionIds: number[];
 }
+
+/**
+ * KnowledgeBase 对应后端 KnowledgeBaseResponse.java。
+ * 它由知识库接口返回，在本项目中用于知识库列表、文档创建入口和所有权边界展示。
+ */
+export interface KnowledgeBase {
+  id: number;
+  name: string;
+  description?: string;
+  visibility: string;
+  documentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * CreateKnowledgeBasePayload 对应后端 CreateKnowledgeBaseRequest.java。
+ * 它由 KnowledgeBasesPage.tsx 创建，在本项目中作为新建知识库接口请求体。
+ */
+export interface CreateKnowledgeBasePayload {
+  name: string;
+  description?: string;
+}
+
+/**
+ * UpdateKnowledgeBasePayload 对应后端 UpdateKnowledgeBaseRequest.java。
+ * 它由 KnowledgeBasesPage.tsx 创建，在本项目中作为更新知识库接口请求体。
+ */
+export interface UpdateKnowledgeBasePayload {
+  name: string;
+  description?: string;
+}
+
+/**
+ * DocumentSummary 对应后端 DocumentSummaryResponse.java。
+ * 它由知识库下文档列表接口返回，在本项目中只展示元数据，不加载 Markdown 正文。
+ */
+export interface DocumentSummary {
+  id: number;
+  knowledgeBaseId: number;
+  title: string;
+  summary?: string;
+  status: 'DRAFT' | 'PUBLISHED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * DocumentDetail 对应后端 DocumentDetailResponse.java。
+ * 它由文档详情接口返回，在本项目中为 Markdown 编辑器提供完整编辑数据。
+ */
+export interface DocumentDetail extends DocumentSummary {
+  content: string;
+}
+
+/**
+ * CreateDocumentPayload 对应后端 CreateDocumentRequest.java。
+ * 它由 DocumentEditorPage.tsx 创建，在本项目中作为新建文档接口请求体。
+ */
+export interface CreateDocumentPayload {
+  title: string;
+  summary?: string;
+  content: string;
+}
+
+/**
+ * UpdateDocumentPayload 对应后端 UpdateDocumentRequest.java。
+ * 它由 DocumentEditorPage.tsx 创建，在本项目中作为保存已有文档接口请求体。
+ */
+export interface UpdateDocumentPayload {
+  title: string;
+  summary?: string;
+  status: 'DRAFT' | 'PUBLISHED';
+  content: string;
+}

@@ -41,11 +41,11 @@
 
 ## Stage 3：知识库与文档
 
-- [ ] knowledge_bases 表。
-- [ ] documents 和 document_contents 表。
-- [ ] 知识库 CRUD。
-- [ ] 文档 CRUD。
-- [ ] Markdown 编辑页面。
+- [x] knowledge_bases 表。
+- [x] documents 和 document_contents 表。
+- [x] 知识库 CRUD。
+- [x] 文档 CRUD。
+- [x] Markdown 编辑页面。
 
 ## Stage 4：附件与版本历史
 

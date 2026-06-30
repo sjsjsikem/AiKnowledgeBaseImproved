@@ -4,7 +4,7 @@
 
 ## 当前实施阶段
 
-当前仓库处于 **Stage 2：RBAC 与管理员基础**。
+当前仓库处于 **Stage 3：知识库与文档**。
 
 已实现目标：
 
@@ -16,8 +16,9 @@
 - 前端 API 客户端、响应解包、登录态 store、路由结构、登录/注册/知识库/文档/后台阶段入口。
 - 用户注册、登录、JWT 认证、当前用户和退出登录。
 - RBAC 表结构、管理员种子账号、角色权限加载、后台用户启停、用户角色分配、角色权限分配。
+- 知识库 CRUD、文档 CRUD、Markdown 编辑器、文档元数据与正文分表、当前用户所有权校验。
 
-Stage 3 将实现知识库与文档。
+Stage 4 将实现附件上传与文档版本历史。
 
 ## 技术栈
 
@@ -127,6 +128,18 @@ mvn spring-boot:run
 - Create Role: `POST /api/admin/roles`
 - Update Role Permissions: `PUT /api/admin/roles/{roleId}/permissions`
 - Permissions: `GET /api/admin/permissions`
+
+知识库与文档接口：
+
+- Knowledge Bases: `GET /api/knowledge-bases`
+- Create Knowledge Base: `POST /api/knowledge-bases`
+- Update Knowledge Base: `PUT /api/knowledge-bases/{knowledgeBaseId}`
+- Delete Knowledge Base: `DELETE /api/knowledge-bases/{knowledgeBaseId}`
+- Documents: `GET /api/knowledge-bases/{knowledgeBaseId}/documents`
+- Create Document: `POST /api/knowledge-bases/{knowledgeBaseId}/documents`
+- Document Detail: `GET /api/documents/{documentId}`
+- Save Document: `PUT /api/documents/{documentId}`
+- Delete Document: `DELETE /api/documents/{documentId}`
 
 ## 启动前端
 

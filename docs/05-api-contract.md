@@ -249,6 +249,153 @@ GET /api/admin/permissions
 
 需要权限：`admin:role:read`
 
+## Stage 3 知识库与文档接口
+
+知识库与文档接口均需要 JWT。Stage 3 的安全边界是“当前用户只能访问自己创建的知识库及其文档”，由 `KnowledgeService.java` 根据 `SecurityUtils.currentUser()` 和 `knowledge_bases.owner_id` 校验。
+
+### 知识库列表
+
+```text
+GET /api/knowledge-bases
+Authorization: Bearer <accessToken>
+```
+
+响应 `data`：
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Java 后端学习",
+    "description": "Spring Boot 和企业级工程实践",
+    "visibility": "PRIVATE",
+    "documentCount": 2,
+    "createdAt": "2026-06-30T10:00:00",
+    "updatedAt": "2026-06-30T10:00:00"
+  }
+]
+```
+
+### 创建知识库
+
+```text
+POST /api/knowledge-bases
+```
+
+请求：
+
+```json
+{
+  "name": "Java 后端学习",
+  "description": "Spring Boot 和企业级工程实践"
+}
+```
+
+### 更新知识库
+
+```text
+PUT /api/knowledge-bases/{knowledgeBaseId}
+```
+
+请求：
+
+```json
+{
+  "name": "Java 全栈学习",
+  "description": "后端、前端、AI 和 RAG"
+}
+```
+
+### 删除知识库
+
+```text
+DELETE /api/knowledge-bases/{knowledgeBaseId}
+```
+
+删除知识库时会逻辑删除该知识库下的文档元数据。
+
+### 文档列表
+
+```text
+GET /api/knowledge-bases/{knowledgeBaseId}/documents
+```
+
+响应 `data`：
+
+```json
+[
+  {
+    "id": 1,
+    "knowledgeBaseId": 1,
+    "title": "统一响应设计",
+    "summary": "ApiResponse 和错误码约定",
+    "status": "DRAFT",
+    "createdAt": "2026-06-30T10:10:00",
+    "updatedAt": "2026-06-30T10:20:00"
+  }
+]
+```
+
+### 创建文档
+
+```text
+POST /api/knowledge-bases/{knowledgeBaseId}/documents
+```
+
+请求：
+
+```json
+{
+  "title": "统一响应设计",
+  "summary": "ApiResponse 和错误码约定",
+  "content": "# 统一响应\n\n后端统一返回 code/message/data。"
+}
+```
+
+### 文档详情
+
+```text
+GET /api/documents/{documentId}
+```
+
+响应 `data`：
+
+```json
+{
+  "id": 1,
+  "knowledgeBaseId": 1,
+  "title": "统一响应设计",
+  "summary": "ApiResponse 和错误码约定",
+  "status": "DRAFT",
+  "content": "# 统一响应\n\n后端统一返回 code/message/data。",
+  "createdAt": "2026-06-30T10:10:00",
+  "updatedAt": "2026-06-30T10:20:00"
+}
+```
+
+### 保存文档
+
+```text
+PUT /api/documents/{documentId}
+```
+
+请求：
+
+```json
+{
+  "title": "统一响应设计",
+  "summary": "ApiResponse、ErrorCode 和前端解包",
+  "status": "PUBLISHED",
+  "content": "# 统一响应\n\n后端统一返回 code/message/data。"
+}
+```
+
+### 删除文档
+
+```text
+DELETE /api/documents/{documentId}
+```
+
 ## Trace ID
 
 后端响应头返回 `X-Trace-Id`。前端遇到接口错误时应保留该值，方便排查。

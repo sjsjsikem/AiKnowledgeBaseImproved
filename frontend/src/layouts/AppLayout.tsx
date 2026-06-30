@@ -73,7 +73,7 @@ export function AppLayout() {
       </aside>
       <main className="main-panel">
         <header className="topbar">
-          <span>Stage 2 RBAC</span>
+          <span>Stage 3 Knowledge & Documents</span>
           <div className="topbar-user">
             <strong>{user?.nickname ?? user?.username}</strong>
             <button type="button" onClick={handleLogout}>退出</button>

@@ -258,6 +258,120 @@ h2 {
   box-shadow: 0 12px 26px rgba(46, 39, 28, 0.08);
 }
 
+.knowledge-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.knowledge-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: rgba(255, 252, 244, 0.94);
+  border: 1px solid #d9d2c5;
+  border-radius: 8px;
+  box-shadow: 0 12px 26px rgba(46, 39, 28, 0.08);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  color: #14211e;
+  background: #d9ef68;
+  border: 1px solid #14211e;
+  border-radius: 6px;
+  font-weight: 800;
+}
+
+.document-list {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #d9d2c5;
+}
+
+.document-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: #fffcf4;
+  border: 1px solid #d9d2c5;
+  border-radius: 8px;
+}
+
+.document-row strong {
+  display: block;
+  color: #172421;
+}
+
+.document-row span {
+  display: block;
+  margin-top: 4px;
+  color: #53645f;
+  line-height: 1.55;
+}
+
+.editor-meta {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.2fr) minmax(220px, 1.2fr) minmax(140px, 0.6fr);
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 16px;
+  background: rgba(255, 252, 244, 0.94);
+  border: 1px solid #d9d2c5;
+  border-radius: 8px;
+  box-shadow: 0 12px 26px rgba(46, 39, 28, 0.08);
+}
+
+.editor-meta label {
+  display: grid;
+  gap: 7px;
+  color: #41524d;
+  font-weight: 700;
+}
+
+.editor-meta input,
+.editor-meta select,
+.compact-form select {
+  height: 40px;
+  padding: 0 10px;
+  color: #21302d;
+  background: #fffcf4;
+  border: 1px solid #c9c1b4;
+  border-radius: 6px;
+}
+
+.markdown-preview {
+  color: #21302d;
+  line-height: 1.7;
+}
+
+.markdown-preview h1 {
+  margin: 0 0 14px;
+  font-size: 30px;
+}
+
+.markdown-preview h2 {
+  margin: 18px 0 10px;
+  font-size: 20px;
+}
+
+.markdown-preview p {
+  margin: 0 0 10px;
+}
+
 .admin-panel-wide {
   grid-row: span 2;
 }
@@ -427,7 +541,9 @@ h2 {
   .status-grid,
   .lesson-grid,
   .editor-shell,
-  .admin-grid {
+  .admin-grid,
+  .editor-meta,
+  .document-row {
     grid-template-columns: 1fr;
   }
 

@@ -78,7 +78,6 @@
 | Stage 1 | 登录页 | `frontend/src/pages/LoginPage.tsx` | 登录表单、错误提示和登录后跳转 |
 | Stage 1 | 注册页 | `frontend/src/pages/RegisterPage.tsx` | 注册表单和注册后自动登录 |
 | Stage 1 | 登录态恢复 | `frontend/src/layouts/AppLayout.tsx` | 刷新后通过 `/users/me` 恢复用户资料 |
-| Stage 1 | 知识库入口占位 | `frontend/src/pages/KnowledgeBasesPage.tsx` | 业务入口和后端连通状态展示 |
 | Stage 2 | RBAC 表关系 | `backend/src/main/resources/db/migration/V3__create_rbac_tables.sql` | 用户、角色、权限两层多对多 |
 | Stage 2 | 角色实体 | `backend/src/main/java/com/aiknowledgebase/rbac/entity/Role.java` | roles 表和 Java Entity 映射 |
 | Stage 2 | 权限实体 | `backend/src/main/java/com/aiknowledgebase/rbac/entity/Permission.java` | permissions 表和 Java Entity 映射 |
@@ -103,3 +102,26 @@
 | Stage 2 | 管理员后台 | `frontend/src/pages/AdminPage.tsx` | 用户启停、角色分配、权限分配 |
 | Stage 2 | 权限菜单 | `frontend/src/layouts/AppLayout.tsx` | 根据 RBAC 权限控制管理员菜单展示 |
 | Stage 2 | 前端类型契约 | `frontend/src/types/api.ts` | AdminUser、Role、Permission 和授权请求类型 |
+| Stage 3 | 知识库与文档表 | `backend/src/main/resources/db/migration/V4__create_knowledge_document_tables.sql` | 知识库、文档元数据、Markdown 正文分表 |
+| Stage 3 | 知识库实体 | `backend/src/main/java/com/aiknowledgebase/knowledge/entity/KnowledgeBase.java` | ownerId 所有权边界和知识库容器映射 |
+| Stage 3 | 文档实体 | `backend/src/main/java/com/aiknowledgebase/knowledge/entity/Document.java` | 文档标题、摘要、状态等元数据映射 |
+| Stage 3 | 文档正文实体 | `backend/src/main/java/com/aiknowledgebase/knowledge/entity/DocumentContent.java` | Markdown 正文从列表元数据中拆分 |
+| Stage 3 | 知识库 Mapper | `backend/src/main/java/com/aiknowledgebase/knowledge/mapper/KnowledgeBaseMapper.java` | MyBatis-Plus 知识库 CRUD 数据访问 |
+| Stage 3 | 文档 Mapper | `backend/src/main/java/com/aiknowledgebase/knowledge/mapper/DocumentMapper.java` | documents 表元数据读写 |
+| Stage 3 | 文档正文 Mapper | `backend/src/main/java/com/aiknowledgebase/knowledge/mapper/DocumentContentMapper.java` | document_contents 正文读写 |
+| Stage 3 | 知识库请求 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/CreateKnowledgeBaseRequest.java` | 创建知识库表单校验 |
+| Stage 3 | 知识库更新 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/UpdateKnowledgeBaseRequest.java` | 更新知识库可编辑字段边界 |
+| Stage 3 | 知识库响应 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/KnowledgeBaseResponse.java` | 不暴露 ownerId 的知识库响应结构 |
+| Stage 3 | 文档创建 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/CreateDocumentRequest.java` | 标题、摘要、Markdown 正文输入边界 |
+| Stage 3 | 文档更新 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/UpdateDocumentRequest.java` | 保存文档时的标题、摘要、状态和正文 |
+| Stage 3 | 文档列表 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/DocumentSummaryResponse.java` | 不加载正文的轻量列表响应 |
+| Stage 3 | 文档详情 DTO | `backend/src/main/java/com/aiknowledgebase/knowledge/dto/DocumentDetailResponse.java` | 元数据与正文合并后的编辑器响应 |
+| Stage 3 | 知识库业务编排 | `backend/src/main/java/com/aiknowledgebase/knowledge/service/KnowledgeService.java` | 所有权校验、事务、分表写入和 DTO 转换 |
+| Stage 3 | 知识库 Controller | `backend/src/main/java/com/aiknowledgebase/knowledge/controller/KnowledgeController.java` | 知识库和文档 HTTP 接口入口 |
+| Stage 3 | Mapper 扫描 | `backend/src/main/java/com/aiknowledgebase/AiKnowledgeBaseApplication.java` | 新增 knowledge.mapper 扫描路径 |
+| Stage 3 | 系统阶段标记 | `backend/src/main/java/com/aiknowledgebase/system/SystemInfoController.java` | 返回 stage-3-knowledge-documents |
+| Stage 3 | 知识库 API | `frontend/src/api/knowledge.ts` | 知识库和文档接口封装 |
+| Stage 3 | 知识库管理页 | `frontend/src/pages/KnowledgeBasesPage.tsx` | 知识库 CRUD、文档列表和缓存刷新 |
+| Stage 3 | Markdown 编辑器 | `frontend/src/pages/DocumentEditorPage.tsx` | 文档新建、加载、保存和轻量预览 |
+| Stage 3 | 前端类型契约 | `frontend/src/types/api.ts` | KnowledgeBase、DocumentSummary、DocumentDetail 类型 |
+| Stage 3 | 业务布局状态 | `frontend/src/layouts/AppLayout.tsx` | 顶部栏阶段标记更新 |
