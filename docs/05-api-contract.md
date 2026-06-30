@@ -132,7 +132,16 @@ POST /api/auth/logout
 Authorization: Bearer <accessToken>
 ```
 
-当前 Stage 1 退出登录由前端清除 Token 完成；服务端 Token 黑名单将在 Stage 5 Redis 阶段实现。
+Stage 5 起，退出登录会把当前 Bearer Token 写入 Redis 黑名单。后续请求如果继续携带该 Token，JWT 过滤器会把它视为未登录。
+
+响应 `data`：`null`
+
+缓存影响：
+
+- 写入 `auth:blacklist:{tokenHash}`。
+- Redis Key 的 TTL 等于 JWT 剩余有效期。
+
+如果 Redis 短暂不可用，接口仍返回成功，前端继续清除本地 Token；服务端日志会记录黑名单写入失败，便于排查。
 
 ## Stage 2 RBAC 管理接口
 

@@ -223,3 +223,22 @@ documents -> attachments
 | `deleted` | 逻辑删除标记 |
 | `created_at` | 上传时间 |
 | `updated_at` | 更新时间 |
+
+## Stage 5 Redis 缓存设计
+
+Stage 5 不新增 MySQL 表，而是在 Redis 中保存可重建的派生数据。Redis 中的数据都不能作为唯一事实来源；缓存丢失、过期或 Redis 短暂不可用时，业务必须回退到 MySQL 查询。
+
+### Redis Key 规划
+
+| Key | Value | TTL | 说明 |
+| --- | --- | --- | --- |
+| `kb:hot:user:{userId}` | `KnowledgeBaseResponse[]` JSON | 5 分钟 | 当前用户常用入口的知识库列表缓存，包含文档数量。 |
+| `doc:detail:user:{userId}:doc:{documentId}` | `DocumentDetailResponse` JSON | 10 分钟 | 当前用户可访问文档的详情缓存，包含 Markdown 正文。 |
+| `auth:blacklist:{tokenHash}` | `true` | JWT 剩余有效期 | 退出登录后的 Token 黑名单，阻止旧 Token 继续访问。 |
+
+### 缓存失效规则
+
+- 创建、更新、删除知识库后，删除当前用户的 `kb:hot:user:{userId}`。
+- 创建、删除文档后，删除当前用户的知识库列表缓存；删除文档时同时删除该文档详情缓存。
+- 保存文档或回滚文档版本后，删除并重建当前用户的文档详情缓存，同时删除知识库列表缓存，保证标题、摘要、状态和更新时间一致。
+- Token 退出登录后写入黑名单，TTL 使用 JWT 剩余有效期，避免 Redis 中长期堆积无效键。

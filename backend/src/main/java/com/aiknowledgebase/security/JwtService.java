@@ -67,12 +67,42 @@ public class JwtService {
      * @return Long 用户主键，来自 JWT 的 subject 字段。
      */
     public Long parseUserId(String token) {
-        // verifyWith 会先验证签名和过期时间；验签失败会抛异常，由过滤器统一当作未登录处理。
-        Claims claims = Jwts.parser()
+        // claims 来自 parseClaims 的验签结果，subject 中保存的是 User.java 的用户主键。
+        Claims claims = parseClaims(token);
+        return Long.valueOf(claims.getSubject());
+    }
+
+    /**
+     * remainingTtl 计算 JWT 距离过期还剩多久。
+     * 它读取 JWT expiration 字段并转换为 Java Duration，在本项目中为 Redis Token 黑名单设置自动过期时间。
+     *
+     * @param token 来自前端 Authorization Bearer 头的 JWT 字符串。
+     * @return Duration 表示 Token 剩余有效期；已过期时返回 Duration.ZERO。
+     */
+    public Duration remainingTtl(String token) {
+        // expiration 来自 JWT 标准过期时间字段，用于让黑名单 key 不超过 Token 原本生命周期。
+        Instant expiration = parseClaims(token).getExpiration().toInstant();
+        // ttl 使用当前时间和过期时间计算，避免已过期 Token 写入 Redis。
+        Duration ttl = Duration.between(Instant.now(), expiration);
+        if (ttl.isNegative() || ttl.isZero()) {
+            return Duration.ZERO;
+        }
+        return ttl;
+    }
+
+    /**
+     * parseClaims 统一解析并校验 JWT。
+     * 它使用 jjwt parser 验证签名和过期时间，在本项目中让用户 ID 解析和 TTL 计算复用同一套校验逻辑。
+     *
+     * @param token 来自前端 Authorization Bearer 头的 JWT 字符串。
+     * @return Claims 是 jjwt 提供的 JWT 载荷对象。
+     */
+    private Claims parseClaims(String token) {
+        // verifyWith 会先验证签名和过期时间；验签失败会抛异常，由调用方统一当作未登录处理。
+        return Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return Long.valueOf(claims.getSubject());
     }
 }

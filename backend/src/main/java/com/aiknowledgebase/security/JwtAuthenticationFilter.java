@@ -26,6 +26,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     // userAccessService 来自 UserAccessService.java，用于根据 JWT 用户 ID 加载数据库中的当前用户。
     private final UserAccessService userAccessService;
+    // tokenBlacklistService 来自 TokenBlacklistService.java，用于拒绝已经退出登录的 JWT。
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * 构造方法由 Spring 注入 JWT 和用户访问服务。
@@ -33,10 +35,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      *
      * @param jwtService 来自 JwtService.java，用于解析 Bearer Token。
      * @param userAccessService 来自 UserAccessService.java，用于加载 CurrentUser。
+     * @param tokenBlacklistService 来自 TokenBlacklistService.java，用于检查 Redis Token 黑名单。
      */
-    public JwtAuthenticationFilter(JwtService jwtService, UserAccessService userAccessService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserAccessService userAccessService,
+            TokenBlacklistService tokenBlacklistService
+    ) {
         this.jwtService = jwtService;
         this.userAccessService = userAccessService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     /**
@@ -56,8 +64,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // token 是前端放在 Authorization Bearer 头里的 JWT，后续会校验签名、黑名单和用户状态。
         String token = header.substring("Bearer ".length());
         try {
+            if (tokenBlacklistService.isBlacklisted(token)) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
             Long userId = jwtService.parseUserId(token);
             CurrentUser currentUser = userAccessService.loadCurrentUser(userId);
             List<SimpleGrantedAuthority> authorities = currentUser.permissions().stream()

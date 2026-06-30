@@ -42,4 +42,4 @@ npm run build
 
 - Stage 1 注册用户默认返回 `USER` 角色。
 - 真实 RBAC 表、角色权限加载和管理员后台将在 Stage 2 实现。
-- 服务端 Token 黑名单将在 Stage 5 Redis 阶段实现。
+- 服务端 Token 黑名单已在 Stage 5 Redis 阶段实现。

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -71,12 +72,14 @@ public class AuthController {
 
     /**
      * logout 是退出登录接口。
-     * Stage 1 只返回成功，由前端清除 Token；Stage 5 接入 Redis 后会扩展为服务端 Token 黑名单。
+     * 它把当前 Bearer Token 交给 AuthService 写入 Redis 黑名单，在本项目中实现服务端退出登录。
      *
+     * @param authorizationHeader 来自 HTTP Authorization 请求头，由 Spring MVC 注入。
      * @return ApiResponse 空成功响应，保持前后端统一交互格式。
      */
     @PostMapping("/logout")
-    public ApiResponse<Void> logout() {
+    public ApiResponse<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        authService.logout(authorizationHeader);
         return ApiResponse.success();
     }
 }

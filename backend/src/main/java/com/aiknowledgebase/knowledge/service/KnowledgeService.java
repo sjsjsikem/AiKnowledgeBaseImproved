@@ -1,5 +1,6 @@
 package com.aiknowledgebase.knowledge.service;
 
+import com.aiknowledgebase.cache.RedisCacheService;
 import com.aiknowledgebase.common.BusinessException;
 import com.aiknowledgebase.common.ErrorCode;
 import com.aiknowledgebase.knowledge.dto.CreateDocumentRequest;
@@ -24,6 +25,7 @@ import com.aiknowledgebase.knowledge.mapper.KnowledgeBaseMapper;
 import com.aiknowledgebase.security.CurrentUser;
 import com.aiknowledgebase.security.SecurityUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -37,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -57,6 +60,10 @@ public class KnowledgeService {
     private static final String PUBLISHED_STATUS = "PUBLISHED";
     // SUPPORTED_DOCUMENT_STATUSES 使用 Java Set 保存允许的文档状态，在本项目中集中校验前端提交值。
     private static final Set<String> SUPPORTED_DOCUMENT_STATUSES = Set.of(DRAFT_STATUS, PUBLISHED_STATUS);
+    // KNOWLEDGE_BASE_LIST_TTL 是知识库列表缓存时间，用于 Stage 5 演示热门入口短 TTL 缓存。
+    private static final Duration KNOWLEDGE_BASE_LIST_TTL = Duration.ofMinutes(5);
+    // DOCUMENT_DETAIL_TTL 是文档详情缓存时间，用于 Stage 5 演示 Markdown 大字段详情缓存。
+    private static final Duration DOCUMENT_DETAIL_TTL = Duration.ofMinutes(10);
 
     // knowledgeBaseMapper 来自 KnowledgeBaseMapper.java，用于读写 knowledge_bases 表。
     private final KnowledgeBaseMapper knowledgeBaseMapper;
@@ -68,6 +75,8 @@ public class KnowledgeService {
     private final DocumentVersionMapper documentVersionMapper;
     // attachmentMapper 来自 AttachmentMapper.java，用于写入和读取附件元数据。
     private final AttachmentMapper attachmentMapper;
+    // redisCacheService 来自 RedisCacheService.java，用于知识库列表和文档详情的 Cache Aside 缓存。
+    private final RedisCacheService redisCacheService;
     // attachmentsRoot 使用 Spring @Value 从 application.yml 或默认值读取附件根目录。
     private final Path attachmentsRoot;
 
@@ -80,6 +89,7 @@ public class KnowledgeService {
      * @param documentContentMapper 来自 DocumentContentMapper.java，用于 document_contents 表 CRUD。
      * @param documentVersionMapper 来自 DocumentVersionMapper.java，用于 document_versions 表 CRUD。
      * @param attachmentMapper 来自 AttachmentMapper.java，用于 attachments 表 CRUD。
+     * @param redisCacheService 来自 RedisCacheService.java，用于读写 Redis 缓存。
      * @param attachmentsDir 来自 Spring @Value 的附件根目录配置。
      */
     public KnowledgeService(
@@ -88,6 +98,7 @@ public class KnowledgeService {
             DocumentContentMapper documentContentMapper,
             DocumentVersionMapper documentVersionMapper,
             AttachmentMapper attachmentMapper,
+            RedisCacheService redisCacheService,
             @Value("${app.storage.attachments-dir:uploads/attachments}") String attachmentsDir
     ) {
         this.knowledgeBaseMapper = knowledgeBaseMapper;
@@ -95,6 +106,7 @@ public class KnowledgeService {
         this.documentContentMapper = documentContentMapper;
         this.documentVersionMapper = documentVersionMapper;
         this.attachmentMapper = attachmentMapper;
+        this.redisCacheService = redisCacheService;
         this.attachmentsRoot = Paths.get(attachmentsDir).toAbsolutePath().normalize();
     }
 
@@ -107,12 +119,23 @@ public class KnowledgeService {
     public List<KnowledgeBaseResponse> listKnowledgeBases() {
         // currentUser 来自 SecurityUtils.java 的 Spring Security 上下文，用于确定知识库所有权查询条件。
         CurrentUser currentUser = SecurityUtils.currentUser();
-        return knowledgeBaseMapper.selectList(new LambdaQueryWrapper<KnowledgeBase>()
+        // cacheKey 使用当前用户 ID 隔离知识库列表缓存，避免不同用户之间共享私有知识库数据。
+        String cacheKey = knowledgeBaseListCacheKey(currentUser.id());
+        // cachedKnowledgeBases 来自 RedisCacheService.java，是当前用户知识库列表的 Cache Aside 读取结果。
+        var cachedKnowledgeBases = redisCacheService.get(cacheKey, new TypeReference<List<KnowledgeBaseResponse>>() {
+        });
+        if (cachedKnowledgeBases.isPresent()) {
+            return cachedKnowledgeBases.get();
+        }
+        // responses 是从 MySQL 查询并转换得到的知识库列表，缓存未命中时作为事实来源。
+        List<KnowledgeBaseResponse> responses = knowledgeBaseMapper.selectList(new LambdaQueryWrapper<KnowledgeBase>()
                         .eq(KnowledgeBase::getOwnerId, currentUser.id())
                         .orderByDesc(KnowledgeBase::getUpdatedAt))
                 .stream()
                 .map(this::toKnowledgeBaseResponse)
                 .toList();
+        redisCacheService.put(cacheKey, responses, KNOWLEDGE_BASE_LIST_TTL);
+        return responses;
     }
 
     /**
@@ -138,6 +161,7 @@ public class KnowledgeService {
         knowledgeBase.setCreatedAt(now);
         knowledgeBase.setUpdatedAt(now);
         knowledgeBaseMapper.insert(knowledgeBase);
+        evictKnowledgeBaseList(currentUser.id());
         return toKnowledgeBaseResponse(knowledgeBase);
     }
 
@@ -172,6 +196,7 @@ public class KnowledgeService {
         knowledgeBase.setDescription(normalizeText(request.description()));
         knowledgeBase.setUpdatedAt(LocalDateTime.now());
         knowledgeBaseMapper.updateById(knowledgeBase);
+        evictKnowledgeBaseList(currentUser.id());
         return toKnowledgeBaseResponse(knowledgeBase);
     }
 
@@ -186,8 +211,13 @@ public class KnowledgeService {
         // currentUser 来自 SecurityUtils.java，用于校验当前用户是否拥有该知识库。
         CurrentUser currentUser = SecurityUtils.currentUser();
         findOwnedKnowledgeBase(knowledgeBaseId, currentUser.id());
+        // documents 来自 documents 表，用于在删除知识库前收集需要失效的文档详情缓存。
+        List<Document> documents = documentMapper.selectList(new LambdaQueryWrapper<Document>()
+                .eq(Document::getKnowledgeBaseId, knowledgeBaseId));
         documentMapper.delete(new LambdaQueryWrapper<Document>().eq(Document::getKnowledgeBaseId, knowledgeBaseId));
         knowledgeBaseMapper.deleteById(knowledgeBaseId);
+        evictKnowledgeBaseList(currentUser.id());
+        documents.forEach(document -> evictDocumentDetail(currentUser.id(), document.getId()));
     }
 
     /**
@@ -243,7 +273,11 @@ public class KnowledgeService {
         content.setUpdatedAt(now);
         documentContentMapper.insert(content);
         createVersionSnapshot(document, content, currentUser.id(), now);
-        return toDocumentDetailResponse(document, content);
+        // response 是新建文档详情响应，写入 Redis 后可支撑保存后跳转到编辑页的首次详情读取。
+        DocumentDetailResponse response = toDocumentDetailResponse(document, content);
+        evictKnowledgeBaseList(currentUser.id());
+        putDocumentDetailCache(currentUser.id(), document.getId(), response);
+        return response;
     }
 
     /**
@@ -256,9 +290,20 @@ public class KnowledgeService {
     public DocumentDetailResponse getDocument(Long documentId) {
         // currentUser 来自 SecurityUtils.java，用于判断文档所属知识库是否属于当前用户。
         CurrentUser currentUser = SecurityUtils.currentUser();
+        // cacheKey 使用当前用户 ID 和文档 ID 隔离文档详情缓存，避免跨用户读取私有文档。
+        String cacheKey = documentDetailCacheKey(currentUser.id(), documentId);
+        // cachedDocument 来自 RedisCacheService.java，是文档详情的 Cache Aside 读取结果。
+        var cachedDocument = redisCacheService.get(cacheKey, new TypeReference<DocumentDetailResponse>() {
+        });
+        if (cachedDocument.isPresent()) {
+            return cachedDocument.get();
+        }
         // document 来自 documents 表，用于读取元数据并找到正文关系。
         Document document = findOwnedDocument(documentId, currentUser.id());
-        return toDocumentDetailResponse(document, findDocumentContent(document.getId()));
+        // response 是从 MySQL 元数据和正文表组合出的文档详情，缓存未命中时回填 Redis。
+        DocumentDetailResponse response = toDocumentDetailResponse(document, findDocumentContent(document.getId()));
+        putDocumentDetailCache(currentUser.id(), documentId, response);
+        return response;
     }
 
     /**
@@ -291,7 +336,11 @@ public class KnowledgeService {
         content.setUpdatedAt(now);
         documentContentMapper.updateById(content);
         createVersionSnapshot(document, content, currentUser.id(), now);
-        return toDocumentDetailResponse(document, content);
+        // response 是保存后的文档详情，用于刷新 Redis 中的文档详情缓存。
+        DocumentDetailResponse response = toDocumentDetailResponse(document, content);
+        evictKnowledgeBaseList(currentUser.id());
+        putDocumentDetailCache(currentUser.id(), document.getId(), response);
+        return response;
     }
 
     /**
@@ -304,9 +353,12 @@ public class KnowledgeService {
     public void deleteDocument(Long documentId) {
         // currentUser 来自 SecurityUtils.java，用于判断文档所属知识库是否属于当前用户。
         CurrentUser currentUser = SecurityUtils.currentUser();
-        findOwnedDocument(documentId, currentUser.id());
+        // document 来自 documents 表，用于删除后失效知识库列表和详情缓存。
+        Document document = findOwnedDocument(documentId, currentUser.id());
         attachmentMapper.delete(new LambdaQueryWrapper<Attachment>().eq(Attachment::getDocumentId, documentId));
         documentMapper.deleteById(documentId);
+        evictKnowledgeBaseList(currentUser.id());
+        evictDocumentDetail(currentUser.id(), document.getId());
     }
 
     /**
@@ -357,7 +409,11 @@ public class KnowledgeService {
         content.setUpdatedAt(now);
         documentContentMapper.updateById(content);
         createVersionSnapshot(document, content, currentUser.id(), now);
-        return toDocumentDetailResponse(document, content);
+        // response 是回滚后的当前文档详情，用于覆盖 Redis 中旧的详情缓存。
+        DocumentDetailResponse response = toDocumentDetailResponse(document, content);
+        evictKnowledgeBaseList(currentUser.id());
+        putDocumentDetailCache(currentUser.id(), document.getId(), response);
+        return response;
     }
 
     /**
@@ -713,6 +769,62 @@ public class KnowledgeService {
                 "/api/attachments/" + attachment.getId() + "/download",
                 attachment.getCreatedAt()
         );
+    }
+
+    /**
+     * knowledgeBaseListCacheKey 生成当前用户知识库列表缓存 key。
+     * 它使用 userId 做命名空间隔离，在本项目中保证私有知识库列表不会跨用户共享。
+     *
+     * @param userId 来自 CurrentUser.java 的当前用户主键。
+     * @return Redis key，用于保存 KnowledgeBaseResponse 列表。
+     */
+    private String knowledgeBaseListCacheKey(Long userId) {
+        return "kb:hot:user:" + userId;
+    }
+
+    /**
+     * documentDetailCacheKey 生成文档详情缓存 key。
+     * 它同时包含 userId 和 documentId，在本项目中让同一文档 ID 也必须经过用户隔离后才能命中缓存。
+     *
+     * @param userId 来自 CurrentUser.java 的当前用户主键。
+     * @param documentId 来自 Document.java 的文档主键。
+     * @return Redis key，用于保存 DocumentDetailResponse。
+     */
+    private String documentDetailCacheKey(Long userId, Long documentId) {
+        return "doc:detail:user:" + userId + ":doc:" + documentId;
+    }
+
+    /**
+     * evictKnowledgeBaseList 删除当前用户知识库列表缓存。
+     * 它调用 RedisCacheService.java 的 delete 方法，在本项目中保证知识库数量和文档数量写后可刷新。
+     *
+     * @param userId 来自 CurrentUser.java 的当前用户主键。
+     */
+    private void evictKnowledgeBaseList(Long userId) {
+        redisCacheService.delete(knowledgeBaseListCacheKey(userId));
+    }
+
+    /**
+     * evictDocumentDetail 删除当前用户某篇文档的详情缓存。
+     * 它调用 RedisCacheService.java 的 delete 方法，在本项目中避免删除文档后继续读到旧正文。
+     *
+     * @param userId 来自 CurrentUser.java 的当前用户主键。
+     * @param documentId 来自 Document.java 的文档主键。
+     */
+    private void evictDocumentDetail(Long userId, Long documentId) {
+        redisCacheService.delete(documentDetailCacheKey(userId, documentId));
+    }
+
+    /**
+     * putDocumentDetailCache 回填文档详情缓存。
+     * 它调用 RedisCacheService.java 写入带 TTL 的 JSON，在本项目中让文档详情读接口避开重复读取 Markdown 大字段。
+     *
+     * @param userId 来自 CurrentUser.java 的当前用户主键。
+     * @param documentId 来自 Document.java 的文档主键。
+     * @param response 来自 DocumentDetailResponse.java 的文档详情响应。
+     */
+    private void putDocumentDetailCache(Long userId, Long documentId, DocumentDetailResponse response) {
+        redisCacheService.put(documentDetailCacheKey(userId, documentId), response, DOCUMENT_DETAIL_TTL);
     }
 
     /**

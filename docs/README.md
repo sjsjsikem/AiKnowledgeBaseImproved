@@ -4,7 +4,7 @@
 
 ## 当前实施阶段
 
-当前仓库处于 **Stage 4：附件与版本历史**。
+当前仓库处于 **Stage 5：缓存与性能**。
 
 已实现目标：
 
@@ -18,8 +18,9 @@
 - RBAC 表结构、管理员种子账号、角色权限加载、后台用户启停、用户角色分配、角色权限分配。
 - 知识库 CRUD、文档 CRUD、Markdown 编辑器、文档元数据与正文分表、当前用户所有权校验。
 - 附件上传、附件下载、附件删除、文档版本快照、版本历史、版本回滚和版本删除。
+- Redis 缓存封装、当前用户知识库列表缓存、文档详情缓存、写操作缓存失效策略和退出登录 Token 黑名单。
 
-Stage 5 将实现 Redis 缓存与性能优化。
+Stage 6 将实现 OpenAI 兼容 AI Provider 和单文档 AI 能力。
 
 ## 技术栈
 
@@ -128,7 +129,7 @@ mvn spring-boot:run
 - Register: `POST /api/auth/register`
 - Login: `POST /api/auth/login`
 - Current User: `GET /api/users/me`
-- Logout: `POST /api/auth/logout`
+- Logout: `POST /api/auth/logout`，会把当前 Bearer Token 写入 Redis 黑名单。
 
 本地演示管理员账号：
 
@@ -163,6 +164,12 @@ mvn spring-boot:run
 - Upload Attachment: `POST /api/documents/{documentId}/attachments`
 - Download Attachment: `GET /api/attachments/{attachmentId}/download`
 - Delete Attachment: `DELETE /api/attachments/{attachmentId}`
+
+Stage 5 Redis 缓存：
+
+- Knowledge Base List Cache: `kb:hot:user:{userId}`，TTL 5 分钟
+- Document Detail Cache: `doc:detail:user:{userId}:doc:{documentId}`，TTL 10 分钟
+- Logout Token Blacklist: `auth:blacklist:{tokenHash}`，TTL 为 JWT 剩余有效期
 
 ## 启动前端
 

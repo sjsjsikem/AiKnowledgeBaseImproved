@@ -12,9 +12,11 @@ import com.aiknowledgebase.rbac.service.RbacService;
 import com.aiknowledgebase.security.CurrentUser;
 import com.aiknowledgebase.security.JwtService;
 import com.aiknowledgebase.security.SecurityUtils;
+import com.aiknowledgebase.security.TokenBlacklistService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -38,6 +40,8 @@ public class AuthService {
     private final JwtService jwtService;
     // rbacService 来自 RbacService.java，负责注册默认角色和读取真实角色权限。
     private final RbacService rbacService;
+    // tokenBlacklistService 来自 TokenBlacklistService.java，用于把退出登录的 JWT 写入 Redis 黑名单。
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * 构造方法由 Spring 自动注入认证业务需要的依赖。
@@ -47,17 +51,20 @@ public class AuthService {
      * @param passwordEncoder 是 Spring Security 自带的 PasswordEncoder 接口，用于 BCrypt 密码处理。
      * @param jwtService 来自 JwtService.java，用于生成登录 Token。
      * @param rbacService 来自 RbacService.java，用于分配默认角色和加载角色权限。
+     * @param tokenBlacklistService 来自 TokenBlacklistService.java，用于服务端退出登录。
      */
     public AuthService(
             UserMapper userMapper,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            RbacService rbacService
+            RbacService rbacService,
+            TokenBlacklistService tokenBlacklistService
     ) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.rbacService = rbacService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     /**
@@ -127,6 +134,21 @@ public class AuthService {
     }
 
     /**
+     * logout 把当前请求携带的 JWT 写入 Redis 黑名单。
+     * 它从 Authorization 头中提取 Bearer Token 并按 JWT 剩余有效期设置 TTL，在本项目中让退出登录后的旧 Token 立即失效。
+     *
+     * @param authorizationHeader 来自 HTTP Authorization 请求头，由 AuthController.java 传入。
+     */
+    public void logout(String authorizationHeader) {
+        // token 来自 extractBearerToken 的结果，缺失时保持退出登录接口幂等成功。
+        String token = extractBearerToken(authorizationHeader);
+        if (!StringUtils.hasText(token)) {
+            return;
+        }
+        tokenBlacklistService.blacklist(token, jwtService.remainingTtl(token));
+    }
+
+    /**
      * issueToken 使用 JwtService 为已认证用户签发 Token。
      * 它把用户主键和用户名写入 JWT，并组装 AuthResponse，在本项目中把后端认证结果交给前端保存。
      *
@@ -149,6 +171,20 @@ public class AuthService {
         return userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, username)
                 .last("LIMIT 1"));
+    }
+
+    /**
+     * extractBearerToken 从 Authorization 请求头提取 JWT。
+     * 它使用 Spring StringUtils 做空值判断，在本项目中把 HTTP 头格式处理留在认证服务的退出登录流程中。
+     *
+     * @param authorizationHeader 来自 AuthController.java 的 Authorization 请求头。
+     * @return JWT 字符串；请求头缺失或格式不匹配时返回 null。
+     */
+    private String extractBearerToken(String authorizationHeader) {
+        if (!StringUtils.hasText(authorizationHeader) || !authorizationHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        return authorizationHeader.substring("Bearer ".length());
     }
 
     /**
